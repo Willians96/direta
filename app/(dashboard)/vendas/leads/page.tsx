@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { UserPlus, Plus, Filter, MessageSquare } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 import {
   Card,
   CardContent,

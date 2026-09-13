@@ -7,6 +7,8 @@ import {
   ArrowRight,
   UserPlus,
 } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 import {
   Card,
   CardContent,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Loader2, Lock, Mail } from "lucide-react";
@@ -12,6 +12,22 @@ import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/shared/logo";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginFallback />}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-direta-orange" />
+    </div>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const callbackUrl = params.get("callbackUrl") || "/";

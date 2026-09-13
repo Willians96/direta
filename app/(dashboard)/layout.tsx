@@ -4,6 +4,8 @@ import { Sidebar } from "@/components/shared/sidebar";
 import { Header } from "@/components/shared/header";
 import type { UserRole } from "@prisma/client";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardLayout({
   children,
 }: {

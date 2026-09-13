@@ -5,6 +5,9 @@ import {
   CheckCircle2,
   ArrowUpRight,
 } from "lucide-react";
+
+// Força renderização em runtime (sem isso, Vercel tenta SSG no build e falha sem DATABASE_URL)
+export const dynamic = "force-dynamic";
 import {
   Card,
   CardContent,

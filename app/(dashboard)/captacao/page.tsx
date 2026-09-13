@@ -11,6 +11,8 @@ import {
   MessageCircle,
   UserPlus as IndicacaoIcon,
 } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 import {
   Card,
   CardContent,
