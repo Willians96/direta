@@ -1,0 +1,363 @@
+// ============================================
+// GESCOLA - Schema Prisma
+// Fase 1: Módulo de Vendas
+// ============================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// AUTH & USUÁRIOS
+// ============================================
+
+enum UserRole {
+  ADMIN
+  CAPTACAO
+  VENDAS
+  RECEPCAO
+}
+
+enum UserStatus {
+  ATIVO
+  INATIVO
+}
+
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  name          String
+  passwordHash  String
+  role          UserRole
+  status        UserStatus @default(ATIVO)
+  phone         String?
+  avatarUrl     String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  lastLoginAt   DateTime?
+
+  // Relacionamentos
+  createdCampaigns Campaign[]    @relation("CampaignCreator")
+  createdLeads     Lead[]        @relation("LeadCreator")
+  assignedLeads    Lead[]        @relation("LeadAssignedTo")
+  interactions     Interaction[]
+  enrollmentsAudit EnrollmentAudit[]
+  sessions         Session[]
+  accounts         Account[]
+
+  @@map("users")
+}
+
+// Auth.js v5 — modelos necessários
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ============================================
+// CURSOS & TURMAS
+// ============================================
+
+enum CourseStatus {
+  ATIVO
+  INATIVO
+  EM_BREVE
+}
+
+model Course {
+  id             String       @id @default(cuid())
+  name           String
+  description    String?      @db.Text
+  workloadHours  Int
+  price          Decimal      @db.Decimal(10, 2)
+  syllabus       String?      @db.Text
+  status         CourseStatus @default(ATIVO)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  classes    Class[]
+  leads      Lead[]
+
+  @@map("courses")
+}
+
+enum ClassStatus {
+  ABERTA
+  EM_ANDAMENTO
+  ENCERRADA
+  CANCELADA
+}
+
+model Class {
+  id         String      @id @default(cuid())
+  courseId   String
+  name       String
+  startDate  DateTime
+  endDate    DateTime?
+  maxStudents Int        @default(30)
+  status     ClassStatus @default(ABERTA)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  course        Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  preEnrollments PreEnrollment[]
+
+  @@map("classes")
+}
+
+// ============================================
+// CAMPANHAS DE MARKETING
+// ============================================
+
+enum CampaignStatus {
+  PLANEJADA
+  ATIVA
+  PAUSADA
+  ENCERRADA
+}
+
+enum CampaignChannel {
+  INSTAGRAM
+  FACEBOOK
+  GOOGLE_ADS
+  WHATSAPP
+  EMAIL
+  INDICACAO
+  OUTRO
+}
+
+model Campaign {
+  id          String          @id @default(cuid())
+  name        String
+  channel     CampaignChannel
+  startDate   DateTime
+  endDate     DateTime?
+  budget      Decimal?        @db.Decimal(10, 2)
+  status      CampaignStatus  @default(PLANEJADA)
+  description String?         @db.Text
+  createdById String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  createdBy User   @relation("CampaignCreator", fields: [createdById], references: [id])
+  leads     Lead[]
+
+  @@map("campaigns")
+}
+
+// ============================================
+// LEADS (núcleo do funil)
+// ============================================
+
+enum LeadStatus {
+  NOVO
+  QUALIFICADO
+  PROPOSTA_ENVIADA
+  EM_NEGOCIACAO
+  AGUARDANDO_ANALISE
+  DEVOLVIDA_AJUSTE
+  APROVADA
+  PERDIDA
+}
+
+model Lead {
+  id           String     @id @default(cuid())
+  fullName     String
+  email        String?
+  phone        String
+  cpf          String?
+  status       LeadStatus @default(NOVO)
+  courseId     String?
+  campaignId   String?
+  assignedToId String?
+  createdById  String
+  notes        String?    @db.Text
+  lostReason   String?    @db.Text
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  course       Course?         @relation(fields: [courseId], references: [id])
+  campaign     Campaign?       @relation(fields: [campaignId], references: [id])
+  assignedTo   User?           @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
+  createdBy    User            @relation("LeadCreator", fields: [createdById], references: [id])
+  interactions Interaction[]
+  preEnrollment PreEnrollment?
+  documents    Document[]
+  audits       EnrollmentAudit[]
+
+  @@index([status])
+  @@index([assignedToId])
+  @@index([campaignId])
+  @@map("leads")
+}
+
+// ============================================
+// INTERAÇÕES (histórico de contato)
+// ============================================
+
+enum InteractionType {
+  LIGACAO
+  WHATSAPP
+  EMAIL
+  REUNIAO
+  VISITA
+  OUTRO
+}
+
+model Interaction {
+  id          String          @id @default(cuid())
+  leadId      String
+  type        InteractionType
+  description String          @db.Text
+  occurredAt  DateTime        @default(now())
+  createdById String
+  createdAt   DateTime        @default(now())
+
+  lead      Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdBy User @relation(fields: [createdById], references: [id])
+
+  @@index([leadId])
+  @@map("interactions")
+}
+
+// ============================================
+// PRÉ-MATRÍCULA
+// ============================================
+
+enum PreEnrollmentStatus {
+  RASCUNHO
+  AGUARDANDO_ANALISE
+  DEVOLVIDA
+  APROVADA
+}
+
+model PreEnrollment {
+  id              String              @id @default(cuid())
+  leadId          String              @unique
+  classId         String?
+  birthDate       DateTime?
+  cpf             String?
+  rg              String?
+  addressStreet   String?
+  addressNumber   String?
+  addressComplement String?
+  addressCity     String?
+  addressState    String?
+  addressZip      String?
+  guardianName    String?
+  guardianCpf     String?
+  guardianPhone   String?
+  status          PreEnrollmentStatus @default(RASCUNHO)
+  returnReason    String?             @db.Text
+  submittedAt     DateTime?
+  decidedAt       DateTime?
+  decidedById     String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  lead  Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  class Class? @relation(fields: [classId], references: [id])
+
+  @@map("pre_enrollments")
+}
+
+// ============================================
+// DOCUMENTOS
+// ============================================
+
+enum DocumentType {
+  CPF
+  RG
+  COMPROVANTE_RESIDENCIA
+  HISTORICO_ESCOLAR
+  FOTO
+  OUTRO
+}
+
+model Document {
+  id         String       @id @default(cuid())
+  leadId     String
+  type       DocumentType
+  fileName   String
+  filePath   String       // caminho relativo ao STORAGE_PATH
+  mimeType   String
+  size       Int          // bytes
+  version    Int          @default(1)
+  uploadedById String
+  uploadedAt DateTime     @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([type])
+  @@map("documents")
+}
+
+// ============================================
+// AUDITORIA
+// ============================================
+
+enum AuditAction {
+  LEAD_CREATED
+  LEAD_ASSIGNED
+  LEAD_STATUS_CHANGED
+  PRE_ENROLLMENT_SUBMITTED
+  PRE_ENROLLMENT_APPROVED
+  PRE_ENROLLMENT_RETURNED
+  USER_CREATED
+  USER_DEACTIVATED
+  DOCUMENT_UPLOADED
+}
+
+model EnrollmentAudit {
+  id        String      @id @default(cuid())
+  leadId    String?
+  action    AuditAction
+  actorId   String
+  details   String?     @db.Text
+  createdAt DateTime    @default(now())
+
+  lead  Lead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  actor User  @relation(fields: [actorId], references: [id])
+
+  @@index([leadId])
+  @@index([actorId])
+  @@index([createdAt])
+  @@map("enrollment_audits")
+}

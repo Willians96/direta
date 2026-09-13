@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gescola-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gescola
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: gescola
+    ports:
+      - "5432:5432"
+    volumes:
+      - gescola_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gescola -d gescola"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  gescola_pgdata:
