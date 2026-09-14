@@ -19,7 +19,6 @@ export default auth((req) => {
     pathname === "/login" ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/health") ||
-    pathname.startsWith("/api/debug") ||
     pathname === "/";
 
   if (isPublic) return NextResponse.next();
