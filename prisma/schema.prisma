@@ -341,17 +341,23 @@ enum AuditAction {
   PRE_ENROLLMENT_APPROVED
   PRE_ENROLLMENT_RETURNED
   USER_CREATED
+  USER_UPDATED
   USER_DEACTIVATED
   DOCUMENT_UPLOADED
+  COURSE_CREATED
+  COURSE_UPDATED
+  COURSE_STATUS_CHANGED
 }
 
 model EnrollmentAudit {
-  id        String      @id @default(cuid())
-  leadId    String?
-  action    AuditAction
-  actorId   String
-  details   String?     @db.Text
-  createdAt DateTime    @default(now())
+  id         String      @id @default(cuid())
+  leadId     String?
+  action     AuditAction
+  actorId    String
+  details    String?     @db.Text
+  targetType String?
+  targetId   String?
+  createdAt  DateTime    @default(now())
 
   lead  Lead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
   actor User  @relation(fields: [actorId], references: [id])
@@ -359,5 +365,6 @@ model EnrollmentAudit {
   @@index([leadId])
   @@index([actorId])
   @@index([createdAt])
+  @@index([targetType, targetId])
   @@map("enrollment_audits")
 }
