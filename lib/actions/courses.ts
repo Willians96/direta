@@ -5,6 +5,17 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
+const paymentMethodEnum = z.enum([
+  "PIX",
+  "BOLETO",
+  "CARTAO_CREDITO",
+  "CARTAO_DEBITO",
+  "DINHEIRO",
+  "TRANSFERENCIA",
+  "PARCELADO_PROPRIO",
+  "OUTRO",
+]);
+
 const courseSchema = z.object({
   name: z.string().min(3, "Nome obrigatório"),
   description: z.string().max(1000).optional(),
@@ -28,6 +39,43 @@ async function requireAdmin() {
   }
   const adminId = (session?.user as any)?.id as string;
   return adminId;
+}
+
+interface PaymentMethodInput {
+  method: z.infer<typeof paymentMethodEnum>;
+  details?: string;
+  active?: boolean;
+}
+
+function parsePaymentMethods(formData: FormData): PaymentMethodInput[] {
+  const methods = formData.getAll("paymentMethod") as string[];
+  const details = formData.getAll("paymentDetails") as string[];
+  const result: PaymentMethodInput[] = [];
+  methods.forEach((m, i) => {
+    if (!m) return;
+    const parsed = paymentMethodEnum.safeParse(m);
+    if (!parsed.success) return;
+    result.push({
+      method: parsed.data,
+      details: details[i] || undefined,
+      active: true,
+    });
+  });
+  return result;
+}
+
+async function upsertPaymentMethods(courseId: string, items: PaymentMethodInput[]) {
+  // Remove todos os antigos e recria (estratégia simples pra CRUD básico)
+  await prisma.coursePaymentMethod.deleteMany({ where: { courseId } });
+  if (items.length === 0) return;
+  await prisma.coursePaymentMethod.createMany({
+    data: items.map((it) => ({
+      courseId,
+      method: it.method,
+      details: it.details || null,
+      active: it.active ?? true,
+    })),
+  });
 }
 
 export async function createCourseAction(
@@ -54,6 +102,8 @@ export async function createCourseAction(
       };
     }
 
+    const paymentMethods = parsePaymentMethods(formData);
+
     const course = await prisma.course.create({
       data: {
         name: parsed.data.name,
@@ -64,6 +114,10 @@ export async function createCourseAction(
         status: parsed.data.status,
       },
     });
+
+    if (paymentMethods.length > 0) {
+      await upsertPaymentMethods(course.id, paymentMethods);
+    }
 
     await prisma.enrollmentAudit.create({
       data: {
@@ -107,6 +161,8 @@ export async function updateCourseAction(
       };
     }
 
+    const paymentMethods = parsePaymentMethods(formData);
+
     const course = await prisma.course.update({
       where: { id },
       data: {
@@ -119,6 +175,8 @@ export async function updateCourseAction(
       },
     });
 
+    await upsertPaymentMethods(course.id, paymentMethods);
+
     await prisma.enrollmentAudit.create({
       data: {
         action: "COURSE_UPDATED",
@@ -130,6 +188,7 @@ export async function updateCourseAction(
     });
 
     revalidatePath("/admin/cursos");
+    revalidatePath(`/admin/cursos/${course.id}`);
     return { ok: true, message: "Curso atualizado!" };
   } catch (e: any) {
     return { ok: false, error: e.message ?? "Erro ao atualizar curso." };

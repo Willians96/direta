@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { GraduationCap } from "lucide-react";
+import Link from "next/link";
+import { GraduationCap, CreditCard, ExternalLink } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -15,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
@@ -29,6 +31,17 @@ const STATUS_VARIANTS: Record<string, "success" | "warning" | "neutral"> = {
   INATIVO: "neutral",
 };
 
+const PAYMENT_LABELS: Record<string, string> = {
+  PIX: "PIX",
+  BOLETO: "Boleto",
+  CARTAO_CREDITO: "Crédito",
+  CARTAO_DEBITO: "Débito",
+  DINHEIRO: "Dinheiro",
+  TRANSFERENCIA: "Transf.",
+  PARCELADO_PROPRIO: "Parcelado",
+  OUTRO: "Outro",
+};
+
 export default async function AdminCursosPage() {
   const session = await auth();
   if ((session?.user as any)?.role !== "ADMIN") {
@@ -40,6 +53,10 @@ export default async function AdminCursosPage() {
     include: {
       _count: {
         select: { classes: true, leads: true },
+      },
+      paymentMethods: {
+        where: { active: true },
+        orderBy: { method: "asc" },
       },
     },
   });
@@ -101,6 +118,7 @@ export default async function AdminCursosPage() {
                   <TableHead>Nome</TableHead>
                   <TableHead>Carga horária</TableHead>
                   <TableHead>Preço</TableHead>
+                  <TableHead>Formas pgto.</TableHead>
                   <TableHead>Turmas</TableHead>
                   <TableHead>Leads</TableHead>
                   <TableHead>Status</TableHead>
@@ -110,7 +128,7 @@ export default async function AdminCursosPage() {
               <TableBody>
                 {courses.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-slate-500">
+                    <TableCell colSpan={8} className="text-center text-slate-500">
                       Nenhum curso cadastrado.
                     </TableCell>
                   </TableRow>
@@ -118,7 +136,14 @@ export default async function AdminCursosPage() {
                   courses.map((c) => (
                     <TableRow key={c.id}>
                       <TableCell>
-                        <div className="font-medium">{c.name}</div>
+                        <div className="font-medium">
+                          <Link
+                            href={`/admin/cursos/${c.id}`}
+                            className="hover:text-direta-orange hover:underline"
+                          >
+                            {c.name}
+                          </Link>
+                        </div>
                         {c.description && (
                           <div className="text-xs text-slate-500 line-clamp-1">
                             {c.description}
@@ -131,8 +156,36 @@ export default async function AdminCursosPage() {
                       <TableCell className="font-medium">
                         {formatCurrency(Number(c.price))}
                       </TableCell>
-                      <TableCell className="text-slate-600">
-                        {c._count.classes}
+                      <TableCell>
+                        {c.paymentMethods.length === 0 ? (
+                          <span className="text-xs text-slate-400">—</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {c.paymentMethods.slice(0, 3).map((pm) => (
+                              <Badge
+                                key={pm.id}
+                                variant="info"
+                                className="text-[10px]"
+                              >
+                                <CreditCard className="mr-0.5 h-2.5 w-2.5" />
+                                {PAYMENT_LABELS[pm.method] ?? pm.method}
+                              </Badge>
+                            ))}
+                            {c.paymentMethods.length > 3 && (
+                              <Badge variant="neutral" className="text-[10px]">
+                                +{c.paymentMethods.length - 3}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Link
+                          href={`/admin/turmas?curso=${c.id}`}
+                          className="text-sm font-medium text-slate-700 hover:text-direta-orange hover:underline"
+                        >
+                          {c._count.classes}
+                        </Link>
                       </TableCell>
                       <TableCell className="text-slate-600">
                         {c._count.leads}
@@ -147,17 +200,25 @@ export default async function AdminCursosPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <CourseFormDialog
-                          course={{
-                            id: c.id,
-                            name: c.name,
-                            description: c.description,
-                            workloadHours: c.workloadHours,
-                            price: c.price,
-                            syllabus: c.syllabus,
-                            status: c.status,
-                          }}
-                        />
+                        <div className="flex items-center justify-end gap-1">
+                          <Button asChild variant="ghost" size="sm">
+                            <Link href={`/admin/cursos/${c.id}`}>
+                              <ExternalLink className="h-3 w-3" />
+                            </Link>
+                          </Button>
+                          <CourseFormDialog
+                            course={{
+                              id: c.id,
+                              name: c.name,
+                              description: c.description,
+                              workloadHours: c.workloadHours,
+                              price: c.price,
+                              syllabus: c.syllabus,
+                              status: c.status,
+                              paymentMethods: c.paymentMethods,
+                            }}
+                          />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
