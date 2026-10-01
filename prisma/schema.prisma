@@ -290,23 +290,36 @@ enum LeadStatus {
   DEVOLVIDA_AJUSTE
   APROVADA
   PERDIDA
+  // --- Sprint 11 — status expandidos do cliente (planilha SISTEMA WILLIAM.xlsx) ---
+  QUARTO_CONTATO // 4º CTT
+  BLOQUEIOU      // cliente bloqueou contato
+  CONCORRENTE    // foi pra escola concorrente
+  FIN_SEM_RENDA  // sem renda / sem condição financeira
+  INATIVO        // lead frio, sem retorno
+}
+
+enum LeadPriority {
+  ALTA
+  MEDIA
+  BAIXA
 }
 
 model Lead {
-  id           String     @id @default(cuid())
+  id           String       @id @default(cuid())
   fullName     String
   email        String?
   phone        String
   cpf          String?
-  status       LeadStatus @default(NOVO)
+  status       LeadStatus   @default(NOVO)
+  priority     LeadPriority @default(MEDIA)
   courseId     String?
   campaignId   String?
   assignedToId String?
   createdById  String
-  notes        String?    @db.Text
-  lostReason   String?    @db.Text
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  notes        String?      @db.Text
+  lostReason   String?      @db.Text
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   course       Course?         @relation(fields: [courseId], references: [id])
   campaign     Campaign?       @relation(fields: [campaignId], references: [id])

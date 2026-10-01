@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import type { LeadStatus } from "@prisma/client";
+import type { LeadStatus, LeadPriority } from "@prisma/client";
 
 const STATUS_CONFIG: Record<
   LeadStatus,
@@ -13,9 +13,29 @@ const STATUS_CONFIG: Record<
   DEVOLVIDA_AJUSTE: { label: "Devolvida", variant: "danger" },
   APROVADA: { label: "Aprovada", variant: "success" },
   PERDIDA: { label: "Perdida", variant: "neutral" },
+  // Sprint 11 — status expandidos
+  QUARTO_CONTATO: { label: "4º contato", variant: "warning" },
+  BLOQUEIOU: { label: "Bloqueou", variant: "danger" },
+  CONCORRENTE: { label: "Concorrente", variant: "danger" },
+  FIN_SEM_RENDA: { label: "S/ renda", variant: "neutral" },
+  INATIVO: { label: "Inativo", variant: "neutral" },
+};
+
+const PRIORITY_CONFIG: Record<
+  LeadPriority,
+  { label: string; variant: "default" | "success" | "warning" | "danger" | "info" | "secondary" | "neutral" }
+> = {
+  ALTA: { label: "Alta", variant: "danger" },
+  MEDIA: { label: "Média", variant: "warning" },
+  BAIXA: { label: "Baixa", variant: "neutral" },
 };
 
 export function StatusBadge({ status }: { status: LeadStatus }) {
   const config = STATUS_CONFIG[status];
+  return <Badge variant={config.variant}>{config.label}</Badge>;
+}
+
+export function PriorityBadge({ priority }: { priority: LeadPriority }) {
+  const config = PRIORITY_CONFIG[priority];
   return <Badge variant={config.variant}>{config.label}</Badge>;
 }
