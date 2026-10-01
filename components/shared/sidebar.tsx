@@ -15,6 +15,7 @@ import {
   Settings,
   ClipboardList,
   TrendingUp,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/shared/logo";
@@ -34,6 +35,7 @@ const NAV_ITEMS: NavItem[] = [
   { title: "Cursos", href: "/admin/cursos", icon: GraduationCap, roles: ["ADMIN"] },
   { title: "Turmas", href: "/admin/turmas", icon: ClipboardList, roles: ["ADMIN"] },
   { title: "Metas", href: "/admin/metas", icon: TrendingUp, roles: ["ADMIN"] },
+  { title: "Alertas", href: "/admin/alertas", icon: AlertTriangle, roles: ["ADMIN", "CAPTACAO"] },
   { title: "Auditoria", href: "/admin/auditoria", icon: ScrollText, roles: ["ADMIN"] },
 
   // Captação

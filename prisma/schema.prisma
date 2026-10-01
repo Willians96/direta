@@ -46,6 +46,7 @@ model User {
   createdLeads     Lead[]        @relation("LeadCreator")
   assignedLeads    Lead[]        @relation("LeadAssignedTo")
   interactions     Interaction[]
+  followups        Followup[]
   enrollmentsAudit EnrollmentAudit[]
   classesTeaching  Class[]       @relation("ClassProfessor")
   goals            Goal[]
@@ -312,6 +313,7 @@ model Lead {
   assignedTo   User?           @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
   createdBy    User            @relation("LeadCreator", fields: [createdById], references: [id])
   interactions Interaction[]
+  followups    Followup[]
   preEnrollment PreEnrollment?
   documents    Document[]
   audits       EnrollmentAudit[]
@@ -321,6 +323,59 @@ model Lead {
   @@index([assignedToId])
   @@index([campaignId])
   @@map("leads")
+}
+
+// ============================================
+// FOLLOW-UPS (registro estruturado de acionamentos)
+// ============================================
+// Diferente de Interaction (log genérico), Followup é um registro
+// operacional de contato proativo com:
+//  - type (canal)
+//  - outcome (RESULTADO do contato)
+//  - nextAction (próximo contato agendado)
+// Permite métricas: "acionados por dia", "leads parados há X dias",
+// "próximos contatos da semana".
+
+enum FollowupType {
+  LIGACAO
+  WHATSAPP
+  EMAIL
+  REUNIAO
+  VISITA
+  OUTRO
+}
+
+enum FollowupOutcome {
+  ATENDEU
+  NAO_ATENDEU
+  RECADO
+  DESISTIU
+  REAGENDOU
+  SEM_RESPOSTA
+}
+
+model Followup {
+  id            String          @id @default(cuid())
+  leadId        String
+  userId        String          // vendedor que registrou
+  type          FollowupType
+  outcome       FollowupOutcome
+  notes         String?         @db.Text
+  nextAction    DateTime?       // data agendada para próximo contato
+  nextActionDone Boolean        @default(false)
+  occurredAt    DateTime        @default(now())  // quando aconteceu o contato
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([leadId])
+  @@index([userId])
+  @@index([occurredAt])
+  @@index([nextAction])
+  @@index([nextActionDone])
+  @@map("followups")
 }
 
 // ============================================

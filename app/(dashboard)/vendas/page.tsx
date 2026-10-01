@@ -20,9 +20,11 @@ import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/shared/stat-card";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { AlertsCard } from "@/components/shared/followups/alerts-card";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { formatDate, formatPhone } from "@/lib/utils";
+import { getStaleLeads, getUpcomingFollowups, getTodayFollowupMetrics } from "@/lib/actions/followups";
 
 const FUNIL_STAGES = [
   { status: "NOVO", label: "Novos", cor: "bg-slate-400" },
@@ -132,6 +134,13 @@ export default async function VendasDashboardPage() {
     quantidade: funilGroups.find((g) => g.status === s.status)?._count._all ?? 0,
   }));
 
+  // === Alertas do vendedor ===
+  const [staleMine, upcomingMine, todayMetrics] = await Promise.all([
+    getStaleLeads(3, "mine"),
+    getUpcomingFollowups(7, "mine"),
+    getTodayFollowupMetrics("mine"),
+  ]);
+
   // === Meus leads (top 5 mais urgentes/recentes) ===
   const meusLeadsOrdenados = [...meusLeads]
     .filter((l) => !["APROVADA", "PERDIDA"].includes(l.status))
@@ -194,7 +203,19 @@ export default async function VendasDashboardPage() {
             variant="success"
             description="Aprovadas pela Recepção"
           />
+          <StatCard
+            title="Acionamentos hoje"
+            value={todayMetrics.total}
+            icon={Clock}
+            variant="info"
+            description="Follow-ups registrados"
+          />
         </div>
+
+        {/* Alertas — leads parados */}
+        {(staleMine.length > 0 || upcomingMine.length > 0) && (
+          <AlertsCard staleLeads={staleMine} upcomingCount={upcomingMine.length} linkHref="/vendas/leads" />
+        )}
 
         {/* Funil pessoal */}
         <Card>
