@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   ScrollText,
   Settings,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/shared/logo";
@@ -30,6 +31,7 @@ const NAV_ITEMS: NavItem[] = [
   { title: "Visão Geral", href: "/admin", icon: LayoutDashboard, roles: ["ADMIN"] },
   { title: "Usuários", href: "/admin/usuarios", icon: Users, roles: ["ADMIN"] },
   { title: "Cursos", href: "/admin/cursos", icon: GraduationCap, roles: ["ADMIN"] },
+  { title: "Turmas", href: "/admin/turmas", icon: ClipboardList, roles: ["ADMIN"] },
   { title: "Auditoria", href: "/admin/auditoria", icon: ScrollText, roles: ["ADMIN"] },
 
   // Captação

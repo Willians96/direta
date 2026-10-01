@@ -47,6 +47,7 @@ model User {
   assignedLeads    Lead[]        @relation("LeadAssignedTo")
   interactions     Interaction[]
   enrollmentsAudit EnrollmentAudit[]
+  classesTeaching  Class[]       @relation("ClassProfessor")
   sessions         Session[]
   accounts         Account[]
 
@@ -111,10 +112,40 @@ model Course {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  classes    Class[]
-  leads      Lead[]
+  classes         Class[]
+  leads           Lead[]
+  paymentMethods  CoursePaymentMethod[]
 
   @@map("courses")
+}
+
+// ============================================
+// FORMAS DE PAGAMENTO (associadas ao curso)
+// ============================================
+
+enum PaymentMethod {
+  PIX
+  BOLETO
+  CARTAO_CREDITO
+  CARTAO_DEBITO
+  DINHEIRO
+  TRANSFERENCIA
+  PARCELADO_PROPRIO
+  OUTRO
+}
+
+model CoursePaymentMethod {
+  id        String        @id @default(cuid())
+  courseId  String
+  method    PaymentMethod
+  details   String?       // ex: "3x sem juros", "10% desconto à vista"
+  active    Boolean       @default(true)
+  createdAt DateTime      @default(now())
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, method])
+  @@map("course_payment_methods")
 }
 
 enum ClassStatus {
@@ -125,20 +156,59 @@ enum ClassStatus {
 }
 
 model Class {
-  id         String      @id @default(cuid())
-  courseId   String
-  name       String
-  startDate  DateTime
-  endDate    DateTime?
-  maxStudents Int        @default(30)
-  status     ClassStatus @default(ABERTA)
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  id          String      @id @default(cuid())
+  courseId    String
+  name        String
+  code        String?     // código curto (ex: SOL-2026-1)
+  schedule    Json?       // {days: ['SEG','QUA'], time: '19h-22h'}
+  startDate   DateTime
+  endDate     DateTime?
+  maxStudents Int         @default(30)
+  professorId String?
+  status      ClassStatus @default(ABERTA)
+  notes       String?     @db.Text
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
-  course        Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course         Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  professor      User?           @relation("ClassProfessor", fields: [professorId], references: [id])
   preEnrollments PreEnrollment[]
+  students       ClassStudent[]
 
+  @@index([courseId])
+  @@index([professorId])
+  @@index([status])
   @@map("classes")
+}
+
+// ============================================
+// MATRÍCULAS NA TURMA (relação Class x Lead)
+// ============================================
+
+enum ClassStudentStatus {
+  ATIVA
+  TRANCADA
+  CONCLUIDA
+  CANCELADA
+}
+
+model ClassStudent {
+  id         String             @id @default(cuid())
+  classId    String
+  leadId     String
+  status     ClassStudentStatus @default(ATIVA)
+  enrolledAt DateTime           @default(now())
+  finishedAt DateTime?
+  notes      String?            @db.Text
+
+  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  lead  Lead  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, leadId])
+  @@index([classId])
+  @@index([leadId])
+  @@index([status])
+  @@map("class_students")
 }
 
 // ============================================
@@ -220,6 +290,7 @@ model Lead {
   preEnrollment PreEnrollment?
   documents    Document[]
   audits       EnrollmentAudit[]
+  classStudents ClassStudent[]
 
   @@index([status])
   @@index([assignedToId])
