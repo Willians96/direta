@@ -103,8 +103,8 @@ export function RegisterFollowupDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant={triggerVariant}>
-          <Phone className="mr-2 h-4 w-4" />
+        <Button variant={triggerVariant} size={triggerLabel ? "default" : "icon"} title={triggerLabel || "Registrar Follow-up"}>
+          <Phone className={triggerLabel ? "mr-2 h-4 w-4" : "h-4 w-4"} />
           {triggerLabel}
         </Button>
       </DialogTrigger>
