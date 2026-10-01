@@ -46,6 +46,7 @@ const NAV_ITEMS: NavItem[] = [
   // Vendas
   { title: "Meu Funil", href: "/vendas", icon: Target, roles: ["ADMIN", "VENDAS"] },
   { title: "Leads Atribuídos", href: "/vendas/leads", icon: UserPlus, roles: ["ADMIN", "VENDAS"] },
+  { title: "Meus Alertas", href: "/vendas/alertas", icon: AlertTriangle, roles: ["VENDAS"] },
   { title: "Documentos", href: "/vendas/documentos", icon: FileText, roles: ["ADMIN", "VENDAS"] },
 
   // Recepção
