@@ -47,6 +47,7 @@ model User {
   assignedLeads    Lead[]        @relation("LeadAssignedTo")
   interactions     Interaction[]
   followups        Followup[]
+  messages         LeadMessage[]
   enrollmentsAudit EnrollmentAudit[]
   classesTeaching  Class[]       @relation("ClassProfessor")
   goals            Goal[]
@@ -327,6 +328,7 @@ model Lead {
   createdBy    User            @relation("LeadCreator", fields: [createdById], references: [id])
   interactions Interaction[]
   followups    Followup[]
+  messages     LeadMessage[]
   preEnrollment PreEnrollment?
   documents    Document[]
   audits       EnrollmentAudit[]
@@ -336,6 +338,50 @@ model Lead {
   @@index([assignedToId])
   @@index([campaignId])
   @@map("leads")
+}
+
+// ============================================
+// MENSAGENS DO LEAD (chat-log por lead)
+// ============================================
+// Armazena as mensagens trocadas com o lead (WhatsApp, ligação, e-mail,
+// reunião presencial, etc.). Diferente de Interaction (log técnico) e
+// Followup (registro operacional de contato proativo), LeadMessage é o
+// CONTEÚDO da conversa, para que gerência possa auditar.
+
+enum MessageChannel {
+  WHATSAPP
+  LIGACAO
+  EMAIL
+  REUNIAO
+  PRESENCIAL
+  OUTRO
+}
+
+enum MessageDirection {
+  // Mensagem enviada pelo vendedor para o lead
+  OUTBOUND
+  // Mensagem recebida do lead
+  INBOUND
+  // Apenas anotação interna (não enviada nem recebida, mas relevante)
+  INTERNAL
+}
+
+model LeadMessage {
+  id        String           @id @default(cuid())
+  leadId    String
+  userId    String           // quem registrou (vendedor/admin)
+  channel   MessageChannel
+  direction MessageDirection
+  content   String           @db.Text
+  occurredAt DateTime        @default(now())
+  createdAt DateTime         @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([leadId, occurredAt])
+  @@index([userId])
+  @@map("lead_messages")
 }
 
 // ============================================

@@ -26,10 +26,12 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { PageHeader } from "@/components/shared/page-header";
 import { RegisterFollowupDialog } from "@/components/shared/followups/register-followup-dialog";
 import { FollowupTimeline } from "@/components/shared/followups/followup-timeline";
+import { ChatDialog } from "@/components/shared/messages/chat-dialog";
 import { formatDateTime, formatPhone, formatDate } from "@/lib/utils";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getLeadFollowups } from "@/lib/actions/followups";
+import { getLeadMessages } from "@/lib/actions/messages";
 
 export default async function LeadDetailPage({
   params,
@@ -65,7 +67,10 @@ export default async function LeadDetailPage({
     redirect("/vendas/leads");
   }
 
-  const followups = await getLeadFollowups(lead.id);
+  const [followups, messages] = await Promise.all([
+    getLeadFollowups(lead.id),
+    getLeadMessages(lead.id),
+  ]);
 
   const docsByType = new Set(lead.documents.map((d) => d.type));
   const docsChecklist = [
@@ -162,12 +167,14 @@ export default async function LeadDetailPage({
               <CardTitle className="text-base">Ações rápidas</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start" asChild>
-                <a href={`https://wa.me/55${lead.phone.replace(/\D/g, "")}`} target="_blank">
-                  <MessageSquare className="mr-2 h-4 w-4" />
-                  Abrir WhatsApp
-                </a>
-              </Button>
+              <ChatDialog
+                leadId={lead.id}
+                leadName={lead.fullName}
+                leadPhone={lead.phone}
+                initialMessages={messages}
+                triggerLabel="Abrir Conversa"
+                triggerVariant="default"
+              />
               <Button variant="outline" className="w-full justify-start" asChild>
                 <a href={`tel:${lead.phone.replace(/\D/g, "")}`}>
                   <Phone className="mr-2 h-4 w-4" />
