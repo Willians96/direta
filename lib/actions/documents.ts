@@ -16,7 +16,15 @@ export type ActionState = {
 
 const uploadSchema = z.object({
   leadId: z.string().cuid(),
-  type: z.enum(["CPF", "RG", "COMPROVANTE_RESIDENCIA", "HISTORICO_ESCOLAR", "OUTRO"]),
+  type: z.enum([
+    "RG",
+    "CPF",
+    "COMPRO_ENDERECO",
+    "COMPRO_PAGAMENTO",
+    "FOTO_ALUNO",
+    "HISTORICO_ESCOLAR",
+    "OUTRO",
+  ]),
   description: z.string().max(200).optional(),
 });
 

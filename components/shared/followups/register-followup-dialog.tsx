@@ -5,7 +5,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Phone, MessageSquare, Mail, Calendar, User, MapPin, MoreHorizontal } from "lucide-react";
-import { FollowupType, FollowupOutcome } from "@prisma/client";
+import { FollowupType, FollowupOutcome, SalesStatus } from "@prisma/client";
+import { SALES_STATUS_OPTIONS } from "@/components/shared/sales-status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,7 @@ import { registerFollowupAction } from "@/lib/actions/followups";
 const schema = z.object({
   type: z.nativeEnum(FollowupType),
   outcome: z.nativeEnum(FollowupOutcome),
+  salesStatus: z.nativeEnum(SalesStatus).optional(),
   notes: z.string().max(2000).optional(),
   occurredAt: z.string().optional(),
   nextAction: z.string().optional(),
@@ -74,6 +76,7 @@ export function RegisterFollowupDialog({
     defaultValues: {
       type: "LIGACAO",
       outcome: "ATENDEU",
+      salesStatus: undefined,
       notes: "",
       occurredAt: nowIso,
       nextAction: "",
@@ -88,6 +91,7 @@ export function RegisterFollowupDialog({
           leadId,
           type: data.type,
           outcome: data.outcome,
+          salesStatus: data.salesStatus,
           notes: data.notes || undefined,
           occurredAt: data.occurredAt ? new Date(data.occurredAt).toISOString() : undefined,
           nextAction: data.nextAction ? new Date(data.nextAction).toISOString() : undefined,
@@ -163,6 +167,28 @@ export function RegisterFollowupDialog({
                 );
               })}
             </div>
+          </div>
+
+          {/* Status de Venda (classificação do vendedor) */}
+          <div>
+            <Label htmlFor="salesStatus">
+              Status de venda (classificação do cliente)
+            </Label>
+            <select
+              id="salesStatus"
+              {...form.register("salesStatus")}
+              className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
+            >
+              <option value="">Não alterar</option>
+              {SALES_STATUS_OPTIONS.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-[10px] text-slate-500">
+              O status escolhido passa a ser o exibido no histórico e no lead.
+            </p>
           </div>
 
           {/* Data/hora do contato */}

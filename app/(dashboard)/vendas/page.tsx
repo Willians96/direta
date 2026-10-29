@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { StatCard } from "@/components/shared/stat-card";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge, PriorityBadge } from "@/components/shared/status-badge";
+import { SalesStatusBadge } from "@/components/shared/sales-status-badge";
 import { AlertsCard } from "@/components/shared/followups/alerts-card";
 import { RegisterFollowupDialog } from "@/components/shared/followups/register-followup-dialog";
 import { prisma } from "@/lib/prisma";
@@ -556,7 +557,7 @@ export default async function VendasDashboardPage() {
                             {lead.course?.name ?? "—"}
                           </td>
                           <td className="py-3 pr-3">
-                            <StatusBadge status={lead.status} />
+                            <SalesStatusBadge status={lead.salesStatus} />
                           </td>
                           <td className="py-3 pr-3">
                             <Badge

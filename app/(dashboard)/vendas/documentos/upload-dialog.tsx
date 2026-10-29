@@ -112,11 +112,15 @@ export function UploadDialog({ leads }: UploadDialogProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="CPF">CPF</SelectItem>
                 <SelectItem value="RG">RG</SelectItem>
-                <SelectItem value="COMPROVANTE_RESIDENCIA">
-                  Comprovante de residência
+                <SelectItem value="CPF">CPF</SelectItem>
+                <SelectItem value="COMPRO_ENDERECO">
+                  Comprovante de endereço
                 </SelectItem>
+                <SelectItem value="COMPRO_PAGAMENTO">
+                  Comprovante de pagamento
+                </SelectItem>
+                <SelectItem value="FOTO_ALUNO">Foto do aluno</SelectItem>
                 <SelectItem value="HISTORICO_ESCOLAR">
                   Histórico escolar
                 </SelectItem>

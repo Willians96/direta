@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { FollowupType, FollowupOutcome, LeadStatus } from "@prisma/client";
+import { FollowupType, FollowupOutcome, LeadStatus, SalesStatus } from "@prisma/client";
 
 /**
  * Sprint 10 — Follow-ups, Clientes parados e Alertas.
@@ -29,6 +29,7 @@ const registerSchema = z.object({
   leadId: z.string().min(1),
   type: z.nativeEnum(FollowupType),
   outcome: z.nativeEnum(FollowupOutcome),
+  salesStatus: z.nativeEnum(SalesStatus).optional(), // status que o vendedor colocou na venda
   notes: z.string().max(2000).optional(),
   nextAction: z.string().optional(), // ISO datetime — vazio = sem próximo
   occurredAt: z.string().optional(), // ISO datetime — default now
@@ -70,11 +71,20 @@ export async function registerFollowupAction(raw: RegisterFollowupInput) {
       userId: actor.id,
       type: parsed.type,
       outcome: parsed.outcome,
+      salesStatus: parsed.salesStatus ?? null,
       notes: parsed.notes,
       nextAction,
       occurredAt,
     },
   });
+
+  // Se o vendedor classificou o lead, atualiza o Status de Venda do lead
+  if (parsed.salesStatus) {
+    await prisma.lead.update({
+      where: { id: lead.id },
+      data: { salesStatus: parsed.salesStatus },
+    });
+  }
 
   await prisma.enrollmentAudit.create({
     data: {
@@ -84,8 +94,8 @@ export async function registerFollowupAction(raw: RegisterFollowupInput) {
       targetType: "Followup",
       targetId: followup.id,
       details: `Follow-up ${parsed.type} (${parsed.outcome})${
-        nextAction ? ` — próximo: ${nextAction.toISOString().slice(0, 10)}` : ""
-      }`,
+        parsed.salesStatus ? ` — status de venda: ${parsed.salesStatus}` : ""
+      }${nextAction ? ` — próximo: ${nextAction.toISOString().slice(0, 10)}` : ""}`,
     },
   });
 
@@ -139,10 +149,25 @@ export async function getLeadFollowups(leadId: string) {
   });
 }
 
+/**
+ * Versão ordenada do mais antigo para o mais novo (formato tabela da cliente).
+ */
+export async function getLeadFollowupHistory(leadId: string) {
+  await requireActor();
+  return prisma.followup.findMany({
+    where: { leadId },
+    include: {
+      user: { select: { id: true, name: true } },
+    },
+    orderBy: { occurredAt: "asc" },
+  });
+}
+
 export type StaleLead = {
   id: string;
   fullName: string;
   status: LeadStatus;
+  salesStatus: SalesStatus;
   courseName: string | null;
   assignedTo: { id: string; name: string } | null;
   lastContactAt: Date;
@@ -197,6 +222,7 @@ export async function getStaleLeads(
         id: l.id,
         fullName: l.fullName,
         status: l.status,
+        salesStatus: l.salesStatus,
         courseName: l.course?.name ?? null,
         assignedTo: l.assignedTo,
         lastContactAt: last,

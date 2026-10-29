@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge, PriorityBadge } from "@/components/shared/status-badge";
+import { SalesStatusBadge } from "@/components/shared/sales-status-badge";
 import { formatPhone, formatDate } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { LeadStatus, LeadPriority } from "@prisma/client";
@@ -261,8 +262,9 @@ export default async function LeadsPage({
                       <th className="px-6 py-3">Nome</th>
                       <th className="px-6 py-3">Prioridade</th>
                       <th className="px-6 py-3">Telefone</th>
+                      <th className="px-6 py-3">Fonte</th>
                       <th className="px-6 py-3">Curso</th>
-                      <th className="px-6 py-3">Status</th>
+                      <th className="px-6 py-3">Status de venda</th>
                       <th className="px-6 py-3">Vendedor</th>
                       <th className="px-6 py-3">Atualizado</th>
                       <th className="px-6 py-3"></th>
@@ -288,9 +290,10 @@ export default async function LeadsPage({
                           <PriorityBadge priority={lead.priority} />
                         </td>
                         <td className="px-6 py-3 text-slate-600">{formatPhone(lead.phone)}</td>
+                        <td className="px-6 py-3 text-xs text-slate-500">{lead.source ?? "—"}</td>
                         <td className="px-6 py-3 text-slate-600">{lead.course?.name ?? "—"}</td>
                         <td className="px-6 py-3">
-                          <StatusBadge status={lead.status} />
+                          <SalesStatusBadge status={lead.salesStatus} />
                         </td>
                         <td className="px-6 py-3 text-xs text-slate-500">
                           {lead.assignedTo?.name ?? <span className="text-amber-600">Não atribuído</span>}

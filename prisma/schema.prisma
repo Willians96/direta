@@ -49,6 +49,7 @@ model User {
   followups        Followup[]
   messages         LeadMessage[]
   enrollmentsAudit EnrollmentAudit[]
+  enrollmentsMade  Enrollment[]   @relation("EnrollmentCreator")
   classesTeaching  Class[]       @relation("ClassProfessor")
   goals            Goal[]
   sessions         Session[]
@@ -141,6 +142,7 @@ model Course {
 
   classes         Class[]
   leads           Lead[]
+  enrollments     Enrollment[]
   paymentMethods  CoursePaymentMethod[]
 
   @@map("courses")
@@ -201,6 +203,7 @@ model Class {
   professor      User?           @relation("ClassProfessor", fields: [professorId], references: [id])
   preEnrollments PreEnrollment[]
   students       ClassStudent[]
+  enrollments    Enrollment[]
 
   @@index([courseId])
   @@index([professorId])
@@ -305,13 +308,38 @@ enum LeadPriority {
   BAIXA
 }
 
+// ============================================
+// STATUS DE VENDA (classificação do vendedor)
+// ============================================
+// Campo SEPARADO do status de fluxo (LeadStatus). O vendedor classifica
+// cada cliente com estes status; onde antes aparecia "DEVOLVIDA" na listagem,
+// passa a aparecer o status de venda que o vendedor preencheu.
+
+enum SalesStatus {
+  NEGOCIANDO
+  MATRICULADO
+  RETORNAR
+  BLOQUEIOU
+  FECHOU_CONCORRENTE
+  FIN_SEM_RENDA
+  CIDADE_110KM
+  OUTRA_UNIDADE
+  ADM_RESOLVER
+  DUPLICADO
+  OPORTUNIDADE_VENDAS
+}
+
 model Lead {
   id           String       @id @default(cuid())
   fullName     String
   email        String?
   phone        String
+  phone2       String?       // 2º telefone de contato
+  phone3       String?       // 3º telefone de contato
   cpf          String?
+  source       String?       // como o cliente conheceu a escola ("fonte")
   status       LeadStatus   @default(NOVO)
+  salesStatus  SalesStatus  @default(NEGOCIANDO) // classificação do vendedor
   priority     LeadPriority @default(MEDIA)
   courseId     String?
   campaignId   String?
@@ -330,6 +358,7 @@ model Lead {
   followups    Followup[]
   messages     LeadMessage[]
   preEnrollment PreEnrollment?
+  enrollment   Enrollment?
   documents    Document[]
   audits       EnrollmentAudit[]
   classStudents ClassStudent[]
@@ -419,6 +448,7 @@ model Followup {
   userId        String          // vendedor que registrou
   type          FollowupType
   outcome       FollowupOutcome
+  salesStatus   SalesStatus?    // status que o vendedor colocou na venda
   notes         String?         @db.Text
   nextAction    DateTime?       // data agendada para próximo contato
   nextActionDone Boolean        @default(false)
@@ -512,11 +542,16 @@ model PreEnrollment {
 // ============================================
 
 enum DocumentType {
-  CPF
+  // --- Padrão definido pela cliente (checklist padrão do "Gerenciar Docs") ---
   RG
+  CPF
+  COMPRO_ENDERECO
+  COMPRO_PAGAMENTO
+  FOTO_ALUNO
+  // --- Mantidos para compatibilidade com registros antigos ---
   COMPROVANTE_RESIDENCIA
-  HISTORICO_ESCOLAR
   FOTO
+  HISTORICO_ESCOLAR
   OUTRO
 }
 
@@ -537,6 +572,48 @@ model Document {
   @@index([leadId])
   @@index([type])
   @@map("documents")
+}
+
+// ============================================
+// MATRÍCULA (dados definitivos do aluno)
+// ============================================
+// Preenchidos pelo vendedor no botão "Realizar Matrícula".
+// Ao salvar: cria o registro, marca o lead como MATRICULADO
+// (Status de Venda) e APROVADO (status de fluxo).
+
+model Enrollment {
+  id                String         @id @default(cuid())
+  leadId            String         @unique
+  courseId          String
+  classId           String?
+  fullName          String
+  birthDate         DateTime?
+  cpf               String?
+  rg                String?
+  phone             String
+  phone2            String?
+  email             String?
+  addressStreet     String?
+  addressNumber     String?
+  addressComplement String?
+  addressCity       String?
+  addressState      String?
+  addressZip        String?
+  paymentMethod     PaymentMethod?
+  paymentDetails    String?        @db.Text
+  installments      Int            @default(1)
+  totalAmount       Decimal        @db.Decimal(10, 2)
+  notes             String?        @db.Text
+  enrolledById      String
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  lead       Lead  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  course     Course @relation(fields: [courseId], references: [id])
+  class      Class? @relation(fields: [classId], references: [id])
+  enrolledBy User  @relation("EnrollmentCreator", fields: [enrolledById], references: [id])
+
+  @@map("enrollments")
 }
 
 // ============================================

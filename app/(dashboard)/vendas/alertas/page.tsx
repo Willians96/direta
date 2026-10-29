@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge, PriorityBadge } from "@/components/shared/status-badge";
+import { SalesStatusBadge } from "@/components/shared/sales-status-badge";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getUpcomingFollowups, getStaleLeads } from "@/lib/actions/followups";
@@ -74,6 +75,7 @@ export default async function VendasAlertasPage() {
     id: string;
     fullName: string;
     status: string;
+    salesStatus: "NEGOCIANDO" | "MATRICULADO" | "RETORNAR" | "BLOQUEIOU" | "FECHOU_CONCORRENTE" | "FIN_SEM_RENDA" | "CIDADE_110KM" | "OUTRA_UNIDADE" | "ADM_RESOLVER" | "DUPLICADO" | "OPORTUNIDADE_VENDAS";
     priority: "ALTA" | "MEDIA" | "BAIXA";
     courseName: string | null;
     createdAt: Date;
@@ -96,6 +98,7 @@ export default async function VendasAlertasPage() {
       id: l.id,
       fullName: l.fullName,
       status: l.status,
+      salesStatus: l.salesStatus,
       priority: l.priority,
       courseName: l.course?.name ?? null,
       createdAt: l.createdAt,
@@ -224,7 +227,7 @@ export default async function VendasAlertasPage() {
                             <div className="text-[10px] text-slate-400">{l.courseName ?? "Sem curso"}</div>
                           </td>
                           <td className="px-4 py-3">
-                            <StatusBadge status={l.status as any} />
+                            <SalesStatusBadge status={l.salesStatus} />
                           </td>
                           <td className="px-4 py-3">
                             <PriorityBadge priority={l.priority} />

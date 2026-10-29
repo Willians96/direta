@@ -13,6 +13,7 @@ import {
   Upload,
   CheckCircle2,
   User,
+  GraduationCap,
 } from "lucide-react";
 import {
   Card,
@@ -23,14 +24,15 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { SalesStatusBadge } from "@/components/shared/sales-status-badge";
 import { PageHeader } from "@/components/shared/page-header";
 import { RegisterFollowupDialog } from "@/components/shared/followups/register-followup-dialog";
-import { FollowupTimeline } from "@/components/shared/followups/followup-timeline";
+import { FollowupHistoryTable } from "@/components/shared/followups/followup-history-table";
 import { ChatDialog } from "@/components/shared/messages/chat-dialog";
 import { formatDateTime, formatPhone, formatDate } from "@/lib/utils";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getLeadFollowups } from "@/lib/actions/followups";
+import { getLeadFollowupHistory } from "@/lib/actions/followups";
 import { getLeadMessages } from "@/lib/actions/messages";
 
 export default async function LeadDetailPage({
@@ -53,6 +55,16 @@ export default async function LeadDetailPage({
       preEnrollment: {
         select: { id: true, status: true, submittedAt: true, decidedAt: true },
       },
+      enrollment: {
+        select: {
+          id: true,
+          totalAmount: true,
+          installments: true,
+          paymentMethod: true,
+          courseId: true,
+          classId: true,
+        },
+      },
       documents: {
         orderBy: { uploadedAt: "desc" },
         select: { id: true, type: true, fileName: true, uploadedAt: true },
@@ -68,16 +80,18 @@ export default async function LeadDetailPage({
   }
 
   const [followups, messages] = await Promise.all([
-    getLeadFollowups(lead.id),
+    getLeadFollowupHistory(lead.id),
     getLeadMessages(lead.id),
   ]);
 
   const docsByType = new Set(lead.documents.map((d) => d.type));
+  // Documentos padrão definidos pela cliente
   const docsChecklist = [
-    { type: "CPF", label: "CPF", present: docsByType.has("CPF") },
     { type: "RG", label: "RG", present: docsByType.has("RG") },
-    { type: "COMPROVANTE_RESIDENCIA", label: "Comprovante de Residência", present: docsByType.has("COMPROVANTE_RESIDENCIA") },
-    { type: "HISTORICO_ESCOLAR", label: "Histórico Escolar", present: docsByType.has("HISTORICO_ESCOLAR") },
+    { type: "CPF", label: "CPF", present: docsByType.has("CPF") },
+    { type: "COMPRO_ENDERECO", label: "Comprovante de Endereço", present: docsByType.has("COMPRO_ENDERECO") },
+    { type: "COMPRO_PAGAMENTO", label: "Comprovante de Pagamento", present: docsByType.has("COMPRO_PAGAMENTO") },
+    { type: "FOTO_ALUNO", label: "Foto do Aluno", present: docsByType.has("FOTO_ALUNO") },
   ];
 
   return (
@@ -105,24 +119,45 @@ export default async function LeadDetailPage({
           {/* Informações + status */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between">
                 <div>
                   <CardTitle className="text-base">Informações do lead</CardTitle>
                   <CardDescription>
                     Atribuído para {lead.assignedTo?.name ?? "Ninguém"} · criado em {formatDate(lead.createdAt)}
                   </CardDescription>
                 </div>
-                <StatusBadge status={lead.status} />
+                <div className="flex flex-col items-end gap-1">
+                  <SalesStatusBadge status={lead.salesStatus} />
+                  <span className="text-[10px] text-slate-400">
+                    Status de venda (vendedor)
+                  </span>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <div className="text-slate-500">Telefone</div>
+                <div className="text-slate-500">Telefone principal</div>
                 <div className="font-medium">{formatPhone(lead.phone)}</div>
               </div>
               <div>
                 <div className="text-slate-500">E-mail</div>
                 <div className="font-medium">{lead.email ?? "—"}</div>
+              </div>
+              {lead.phone2 && (
+                <div>
+                  <div className="text-slate-500">2º telefone</div>
+                  <div className="font-medium">{formatPhone(lead.phone2)}</div>
+                </div>
+              )}
+              {lead.phone3 && (
+                <div>
+                  <div className="text-slate-500">3º telefone</div>
+                  <div className="font-medium">{formatPhone(lead.phone3)}</div>
+                </div>
+              )}
+              <div>
+                <div className="text-slate-500">Fonte (como conheceu a escola)</div>
+                <div className="font-medium">{lead.source ?? "—"}</div>
               </div>
               <div>
                 <div className="text-slate-500">Curso de interesse</div>
@@ -131,6 +166,10 @@ export default async function LeadDetailPage({
               <div>
                 <div className="text-slate-500">Campanha</div>
                 <div className="font-medium">{lead.campaign?.name ?? "—"}</div>
+              </div>
+              <div>
+                <div className="text-slate-500">CPF</div>
+                <div className="font-medium">{lead.cpf ?? "—"}</div>
               </div>
               {lead.notes && (
                 <div className="col-span-2">
@@ -141,8 +180,8 @@ export default async function LeadDetailPage({
             </CardContent>
           </Card>
 
-          {/* Timeline de Follow-ups (real do banco) */}
-          <FollowupTimeline items={followups} />
+          {/* Histórico de Follow-ups em tabela (formato da cliente) */}
+          <FollowupHistoryTable items={followups} />
 
           {/* Pré-matrícula */}
           {lead.preEnrollment && (
@@ -181,13 +220,36 @@ export default async function LeadDetailPage({
                   Ligar
                 </a>
               </Button>
+              <Button variant="outline" className="w-full justify-start" asChild>
+                <a
+                  href={`mailto:${lead.email ?? ""}?subject=${encodeURIComponent(
+                    `Contato — ${lead.course?.name ?? "Direta Cursos"}`,
+                  )}`}
+                >
+                  <Mail className="mr-2 h-4 w-4" />
+                  Enviar Email
+                </a>
+              </Button>
               <RegisterFollowupDialog
                 leadId={lead.id}
                 leadName={lead.fullName}
                 triggerLabel="Registrar Follow-up"
                 triggerVariant="outline"
               />
-              <Button className="w-full justify-start" asChild>
+              {lead.enrollment ? (
+                <div className="flex w-full items-center justify-start rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Matrícula realizada
+                </div>
+              ) : (
+                <Button className="w-full justify-start" asChild>
+                  <Link href={`/vendas/leads/${lead.id}/matricula`}>
+                    <GraduationCap className="mr-2 h-4 w-4" />
+                    Realizar Matrícula
+                  </Link>
+                </Button>
+              )}
+              <Button variant="outline" className="w-full justify-start" asChild>
                 <Link href={`/vendas/documentos`}>
                   <FileText className="mr-2 h-4 w-4" />
                   Gerenciar documentos
