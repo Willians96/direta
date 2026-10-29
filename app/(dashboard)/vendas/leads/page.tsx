@@ -108,7 +108,7 @@ export default async function VendasLeadsPage({
 
       <div className="space-y-4 p-4 md:p-6">
         {/* Mini KPIs por status de venda */}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
           <Link
             href="/vendas/leads"
             className="rounded-md border bg-white p-3 text-center transition-colors hover:border-direta-orange"
@@ -162,17 +162,17 @@ export default async function VendasLeadsPage({
         {/* Filtros */}
         <Card>
           <CardContent className="p-4">
-            <form className="flex flex-col gap-3 md:flex-row md:items-center">
+            <form className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <Input
                 name="q"
                 defaultValue={q}
                 placeholder="Buscar por nome, telefone, e-mail..."
-                className="md:max-w-sm"
+                className="w-full sm:max-w-sm"
               />
               <select
                 name="salesStatus"
                 defaultValue={salesStatusFilter ?? ""}
-                className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
+                className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm sm:w-auto"
               >
                 <option value="">Todos os status de venda</option>
                 {SALES_STATUS_OPTIONS.map((s) => (
@@ -184,7 +184,7 @@ export default async function VendasLeadsPage({
               <select
                 name="priority"
                 defaultValue={priorityFilter ?? ""}
-                className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
+                className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm sm:w-auto"
               >
                 <option value="">Todas as prioridades</option>
                 <option value="ALTA">Alta</option>

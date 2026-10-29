@@ -83,7 +83,7 @@ export default async function ConversasPage() {
 
       <div className="space-y-6 p-4 md:p-6">
         {/* KPIs */}
-        <div className="grid gap-4 sm:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardContent className="pt-6">
               <div className="text-xs uppercase text-slate-500">Leads com conversa</div>

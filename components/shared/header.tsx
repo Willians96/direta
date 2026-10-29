@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, LogOut, Search, User as UserIcon } from "lucide-react";
+import { Bell, LogOut, Search, User as UserIcon, Menu } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { signOut } from "next-auth/react";
 import type { UserRole } from "@prisma/client";
@@ -14,8 +14,10 @@ const ROLE_LABELS: Record<UserRole, string> = {
 
 export function Header({
   user,
+  onMenuClick,
 }: {
   user: { name: string; email: string; role: UserRole };
+  onMenuClick?: () => void;
 }) {
   const initials = user.name
     .split(" ")
@@ -25,9 +27,20 @@ export function Header({
     .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-white px-4 md:px-6">
+    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-2 border-b bg-white px-3 md:gap-4 md:px-6">
+      {/* Botão de menu (mobile) */}
+      {onMenuClick && (
+        <button
+          onClick={onMenuClick}
+          className="-ml-1 rounded-md p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 md:hidden"
+          aria-label="Abrir menu"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      )}
+
       {/* Search */}
-      <div className="relative flex-1 max-w-md">
+      <div className="relative min-w-0 flex-1 md:max-w-md">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <input
           type="search"
@@ -36,7 +49,7 @@ export function Header({
         />
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-2 md:gap-3">
         {/* Notificações */}
         <button
           className="relative rounded-full p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
@@ -47,14 +60,14 @@ export function Header({
         </button>
 
         {/* User menu */}
-        <div className="flex items-center gap-3 border-l pl-3 ml-1">
-          <div className="hidden sm:block text-right">
+        <div className="flex items-center gap-2 border-l pl-2 md:gap-3 md:pl-3">
+          <div className="hidden text-right sm:block">
             <div className="text-sm font-medium leading-tight">{user.name}</div>
             <div className="text-[11px] text-slate-500 leading-tight">
               {ROLE_LABELS[user.role]}
             </div>
           </div>
-          <Avatar className="h-9 w-9">
+          <Avatar className="h-9 w-9 shrink-0">
             <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-sm">
               {initials || <UserIcon className="h-4 w-4" />}
             </AvatarFallback>
