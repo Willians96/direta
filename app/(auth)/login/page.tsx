@@ -183,7 +183,7 @@ function LoginForm() {
             <div className="font-semibold text-direta-orange-dark mb-1">
               🔐 Acesso de demonstração:
             </div>
-            <ul className="space-y-0.5 font-mono">
+            <ul className="space-y-0.5 break-all font-mono text-[11px] sm:text-xs">
               <li>admin@direta.com · admin123</li>
               <li>captacao@direta.com · captacao123</li>
               <li>vendas@direta.com · vendas123</li>

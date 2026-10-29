@@ -36,7 +36,10 @@ export function DashboardShell({
   }, [navOpen]);
 
   return (
-    <div className="flex min-h-screen w-full overflow-x-hidden bg-slate-50">
+    // Sem overflow-x-hidden aqui: ele transformaria este elemento em
+    // scroll container e quebraria o `sticky` do header.
+    // O clip de overflow acontece no <main>.
+    <div className="flex min-h-screen w-full bg-slate-50">
       {/* Sidebar desktop */}
       <div className="hidden md:block md:shrink-0">
         <Sidebar role={user.role} />
