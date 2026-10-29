@@ -256,24 +256,24 @@ export default async function LeadsPage({
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full min-w-[760px] text-sm">
                   <thead>
                     <tr className="border-b bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
-                      <th className="px-6 py-3">Nome</th>
-                      <th className="px-6 py-3">Prioridade</th>
-                      <th className="px-6 py-3">Telefone</th>
-                      <th className="px-6 py-3">Fonte</th>
-                      <th className="px-6 py-3">Curso</th>
-                      <th className="px-6 py-3">Status de venda</th>
-                      <th className="px-6 py-3">Vendedor</th>
-                      <th className="px-6 py-3">Atualizado</th>
-                      <th className="px-6 py-3"></th>
+                      <th className="px-3 py-3 md:px-6">Nome</th>
+                      <th className="px-3 py-3 md:px-6">Prioridade</th>
+                      <th className="px-3 py-3 md:px-6">Telefone</th>
+                      <th className="px-3 py-3 md:px-6">Fonte</th>
+                      <th className="px-3 py-3 md:px-6">Curso</th>
+                      <th className="px-3 py-3 md:px-6">Status de venda</th>
+                      <th className="px-3 py-3 md:px-6">Vendedor</th>
+                      <th className="px-3 py-3 md:px-6">Atualizado</th>
+                      <th className="px-3 py-3 md:px-6"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {leads.map((lead) => (
                       <tr key={lead.id} className="hover:bg-slate-50">
-                        <td className="px-6 py-3">
+                        <td className="px-3 py-3 md:px-6">
                           <div className="flex items-center gap-3">
                             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 text-xs font-semibold text-white">
                               {lead.fullName.split(" ").map((n) => n[0]).slice(0, 2).join("")}
@@ -286,20 +286,20 @@ export default async function LeadsPage({
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-3">
+                        <td className="px-3 py-3 md:px-6">
                           <PriorityBadge priority={lead.priority} />
                         </td>
-                        <td className="px-6 py-3 text-slate-600">{formatPhone(lead.phone)}</td>
-                        <td className="px-6 py-3 text-xs text-slate-500">{lead.source ?? "—"}</td>
-                        <td className="px-6 py-3 text-slate-600">{lead.course?.name ?? "—"}</td>
-                        <td className="px-6 py-3">
+                        <td className="px-3 py-3 md:px-6 text-slate-600">{formatPhone(lead.phone)}</td>
+                        <td className="px-3 py-3 md:px-6 text-xs text-slate-500">{lead.source ?? "—"}</td>
+                        <td className="px-3 py-3 md:px-6 text-slate-600">{lead.course?.name ?? "—"}</td>
+                        <td className="px-3 py-3 md:px-6">
                           <SalesStatusBadge status={lead.salesStatus} />
                         </td>
-                        <td className="px-6 py-3 text-xs text-slate-500">
+                        <td className="px-3 py-3 md:px-6 text-xs text-slate-500">
                           {lead.assignedTo?.name ?? <span className="text-amber-600">Não atribuído</span>}
                         </td>
-                        <td className="px-6 py-3 text-slate-500">{formatDate(lead.updatedAt)}</td>
-                        <td className="px-6 py-3 text-right">
+                        <td className="px-3 py-3 md:px-6 text-slate-500">{formatDate(lead.updatedAt)}</td>
+                        <td className="px-3 py-3 md:px-6 text-right">
                           <Button variant="ghost" size="sm" asChild>
                             <Link href={`/vendas/leads/${lead.id}`}>Abrir</Link>
                           </Button>

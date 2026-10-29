@@ -74,13 +74,13 @@ export function FollowupHistoryTable({ items }: { items: FollowupRow[] }) {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[560px] text-sm">
               <thead>
                 <tr className="border-b bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  <th className="px-4 py-3 whitespace-nowrap">DT CTT</th>
-                  <th className="px-4 py-3 whitespace-nowrap">Horário</th>
-                  <th className="px-4 py-3">Histórico</th>
-                  <th className="px-4 py-3 whitespace-nowrap">Status</th>
+                  <th className="px-3 py-3 md:px-4 whitespace-nowrap">DT CTT</th>
+                  <th className="px-3 py-3 md:px-4 whitespace-nowrap">Horário</th>
+                  <th className="min-w-[240px] px-3 py-3 md:px-4">Histórico</th>
+                  <th className="px-3 py-3 md:px-4 whitespace-nowrap">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -92,17 +92,17 @@ export function FollowupHistoryTable({ items }: { items: FollowupRow[] }) {
                   return (
                     <tr key={f.id} className="align-top hover:bg-slate-50">
                       {/* DT CTT */}
-                      <td className="whitespace-nowrap px-4 py-3 text-xs font-medium text-slate-700">
+                      <td className="whitespace-nowrap px-3 py-3 md:px-4 text-xs font-medium text-slate-700">
                         {formatDateBR(f.occurredAt)}
                       </td>
 
                       {/* HORÁRIO */}
-                      <td className="whitespace-nowrap px-4 py-3 text-xs text-slate-700">
+                      <td className="whitespace-nowrap px-3 py-3 md:px-4 text-xs text-slate-700">
                         {formatTimeBR(f.occurredAt)}
                       </td>
 
                       {/* HISTÓRICO */}
-                      <td className="px-4 py-3">
+                      <td className="min-w-[240px] px-3 py-3 md:px-4">
                         <div className="whitespace-pre-wrap text-slate-800">
                           {f.notes || <span className="text-slate-400">—</span>}
                         </div>
@@ -134,7 +134,7 @@ export function FollowupHistoryTable({ items }: { items: FollowupRow[] }) {
                       </td>
 
                       {/* STATUS */}
-                      <td className="whitespace-nowrap px-4 py-3">
+                      <td className="whitespace-nowrap px-3 py-3 md:px-4">
                         {f.salesStatus ? (
                           <Badge
                             variant={

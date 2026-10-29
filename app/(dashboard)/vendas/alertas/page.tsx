@@ -192,16 +192,16 @@ export default async function VendasAlertasPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full min-w-[680px] text-sm">
                   <thead>
                     <tr className="border-b bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
-                      <th className="px-4 py-3">Lead</th>
-                      <th className="px-4 py-3">Status</th>
-                      <th className="px-4 py-3">Prioridade</th>
-                      <th className="px-4 py-3">Cadastrado</th>
-                      <th className="px-4 py-3">Sem contato</th>
-                      <th className="px-4 py-3">Próx. ação</th>
-                      <th className="px-4 py-3"></th>
+                      <th className="px-3 py-3 md:px-4">Lead</th>
+                      <th className="px-3 py-3 md:px-4">Status</th>
+                      <th className="px-3 py-3 md:px-4">Prioridade</th>
+                      <th className="px-3 py-3 md:px-4">Cadastrado</th>
+                      <th className="px-3 py-3 md:px-4">Sem contato</th>
+                      <th className="px-3 py-3 md:px-4">Próx. ação</th>
+                      <th className="px-3 py-3 md:px-4"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -222,21 +222,21 @@ export default async function VendasAlertasPage() {
                                 : ""
                           }`}
                         >
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-3 md:px-4">
                             <div className="font-medium text-slate-900">{l.fullName}</div>
                             <div className="text-[10px] text-slate-400">{l.courseName ?? "Sem curso"}</div>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-3 md:px-4">
                             <SalesStatusBadge status={l.salesStatus} />
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-3 md:px-4">
                             <PriorityBadge priority={l.priority} />
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-3 md:px-4">
                             <div className="text-xs text-slate-500">{formatDate(l.createdAt)}</div>
                             <div className="text-[10px] text-slate-400">há {l.daysSinceCreated}d</div>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-3 md:px-4">
                             <Badge
                               variant={
                                 isCritical ? "destructive" : isWarm ? "warning" : "neutral"
@@ -248,7 +248,7 @@ export default async function VendasAlertasPage() {
                               último: {formatDate(l.lastContactAt)}
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-xs">
+                          <td className="px-3 py-3 md:px-4 text-xs">
                             {l.nextAction && !l.nextActionDone ? (
                               <span
                                 className={
@@ -264,7 +264,7 @@ export default async function VendasAlertasPage() {
                               <span className="text-slate-400">—</span>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-right">
+                          <td className="px-3 py-3 md:px-4 text-right">
                             <Button variant="ghost" size="sm" asChild>
                               <Link href={`/vendas/leads/${l.id}`}>
                                 Abrir

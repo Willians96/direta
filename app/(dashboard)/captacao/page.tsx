@@ -474,7 +474,7 @@ export default async function CaptacaoDashboardPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full min-w-[640px] text-sm">
                   <thead>
                     <tr className="border-b text-left text-xs font-medium uppercase tracking-wide text-slate-500">
                       <th className="pb-2 pr-4">Campanha</th>
