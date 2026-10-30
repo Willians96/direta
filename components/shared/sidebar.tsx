@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -79,15 +79,28 @@ export function Sidebar({
   const pathname = usePathname();
   const items = NAV_ITEMS.filter((item) => item.roles.includes(role));
 
-  // Tópicos recolhidos: { captacao: true } = "Captação" está fechado
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const groupedItems = items.reduce<Record<string, NavItem[]>>((acc, item) => {
+    const area = item.href.split("/")[1];
+    if (!acc[area]) acc[area] = [];
+    acc[area].push(item);
+    return acc;
+  }, {});
+
+  // Áreas disponíveis para este perfil (estável entre renders)
+  const allAreas = useMemo(() => Object.keys(groupedItems), [groupedItems]);
+
+  // Tópicos abertos. null = nenhum ajuste manual (todos abertos por padrão).
+  const [openAreas, setOpenAreas] = useState<string[] | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
   // Restaura o estado salvo no navegador
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) setCollapsed(JSON.parse(raw) as Record<string, boolean>);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) setOpenAreas(parsed as string[]);
+      }
     } catch {
       /* localStorage indisponível */
     }
@@ -98,28 +111,36 @@ export function Sidebar({
   useEffect(() => {
     if (!hydrated) return;
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(collapsed));
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(openAreas));
     } catch {
       /* localStorage indisponível */
     }
-  }, [collapsed, hydrated]);
+  }, [openAreas, hydrated]);
 
-  // Ao navegar, abre o tópico onde a página atual está
+  // Ao navegar, garante que o tópico da rota atual fique aberto
   useEffect(() => {
     const area = pathname.split("/")[1];
     if (!area) return;
-    setCollapsed((prev) => (prev[area] ? { ...prev, [area]: false } : prev));
-  }, [pathname]);
+    setOpenAreas((prev) => {
+      const current = prev === null ? allAreas : prev;
+      if (current.includes(area)) return prev;
+      return [...current, area];
+    });
+  }, [pathname, allAreas]);
 
+  const isAreaOpen = (area: string) =>
+    openAreas === null ? true : openAreas.includes(area);
+
+  // Acordeão: abrir um tópico fecha os demais
   const toggleArea = (area: string) =>
-    setCollapsed((prev) => ({ ...prev, [area]: !prev[area] }));
-
-  const groupedItems = items.reduce<Record<string, NavItem[]>>((acc, item) => {
-    const area = item.href.split("/")[1];
-    if (!acc[area]) acc[area] = [];
-    acc[area].push(item);
-    return acc;
-  }, {});
+    setOpenAreas((prev) => {
+      const current = prev === null ? allAreas : prev;
+      const isOnlyOpen = current.length === 1 && current[0] === area;
+      // Clicar no único tópico aberto fecha tudo
+      if (isOnlyOpen) return current.filter((a) => a !== area);
+      // Clicar em qualquer outro abre só ele
+      return [area];
+    });
 
   return (
     <aside className="flex h-screen w-64 flex-col bg-slate-900 text-slate-100">
@@ -140,7 +161,7 @@ export function Sidebar({
       {/* Nav */}
       <nav className="scrollbar-hidden flex-1 space-y-3 overflow-y-auto overflow-x-hidden p-3">
         {Object.entries(groupedItems).map(([area, areaItems]) => {
-          const isOpen = !collapsed[area];
+          const isOpen = isAreaOpen(area);
 
           return (
             <div key={area}>

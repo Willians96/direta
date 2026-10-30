@@ -9,6 +9,12 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
   "/recepcao": ["ADMIN", "RECEPCAO"],
 };
 
+// Arquivos estáticos (imagens, ícones, fontes) nunca devem passar pelo
+// middleware. Sem esta exceção o otimizador do Next (/_next/image) e os
+// arquivos de /public são respondidos com um redirect para /login —
+// foi o que quebrou o logo na tela de login.
+const STATIC_FILE = /\.(?:png|jpe?g|gif|webp|svg|ico|bmp|woff2?|ttf|eot|css|js|map)$/i;
+
 export default auth((req) => {
   const { nextUrl } = req;
   const session = req.auth;
@@ -19,7 +25,8 @@ export default auth((req) => {
     pathname === "/login" ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/health") ||
-    pathname === "/";
+    pathname === "/" ||
+    STATIC_FILE.test(pathname);
 
   if (isPublic) return NextResponse.next();
 
@@ -46,5 +53,7 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|public).*)"],
+  matcher: [
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpe?g|gif|webp|svg|ico|bmp|woff2?|ttf|eot|css|js|map)$).*)",
+  ],
 };

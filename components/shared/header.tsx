@@ -49,7 +49,9 @@ export function Header({
         />
       </div>
 
-      <div className="flex shrink-0 items-center gap-2 md:gap-3">
+      {/* Ações do usuário — `ml-auto` empurra o bloco até a margem direita
+          mesmo quando a busca (limitada em md:max-w-md) não ocupa a linha toda. */}
+      <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3">
         {/* Notificações */}
         <button
           className="relative rounded-full p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
