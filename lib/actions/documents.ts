@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { DocumentType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { STORAGE_ROOT, toStoredRelativePath } from "@/lib/storage";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
@@ -24,7 +25,6 @@ const uploadSchema = z.object({
 });
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-const STORAGE_PATH = process.env.STORAGE_PATH ?? "./storage";
 
 export async function uploadDocumentAction(
   _prev: ActionState,
@@ -76,7 +76,7 @@ export async function uploadDocumentAction(
     const bytes = Buffer.from(await file.arrayBuffer());
     const fileExt = path.extname(file.name) || "";
     const safeName = `${randomUUID()}${fileExt}`;
-    const leadDir = path.join(STORAGE_PATH, "leads", parsed.data.leadId);
+    const leadDir = path.join(STORAGE_ROOT, "leads", parsed.data.leadId);
     await mkdir(leadDir, { recursive: true });
     const filePath = path.join(leadDir, safeName);
     await writeFile(filePath, bytes);
@@ -86,7 +86,7 @@ export async function uploadDocumentAction(
         leadId: parsed.data.leadId,
         type: parsed.data.type as any,
         fileName: file.name,
-        filePath: path.relative(STORAGE_PATH, filePath).replace(/\\/g, "/"),
+        filePath: toStoredRelativePath(filePath),
         size: file.size,
         mimeType: file.type || "application/octet-stream",
         uploadedById: userId,

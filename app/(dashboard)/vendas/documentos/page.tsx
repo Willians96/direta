@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Upload, FileText, Trash2 } from "lucide-react";
+import { Upload, FileText, Trash2, ExternalLink, Download, AlertTriangle } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -16,6 +16,7 @@ import { auth } from "@/lib/auth";
 import { formatDateTime } from "@/lib/utils";
 import { deleteDocumentAction } from "@/lib/actions/documents";
 import { documentTypeLabel, documentTypeVariant } from "@/lib/document-types";
+import { storedFileExists } from "@/lib/storage";
 import { UploadDialog, FileIcon } from "./upload-dialog";
 
 export const dynamic = "force-dynamic";
@@ -64,6 +65,8 @@ export default async function VendasDocumentosPage() {
   const documents = documentsRaw.map((d) => ({
     ...d,
     uploaderName: uploaderMap.get(d.uploadedById) ?? "Desconhecido",
+    // Na Vercel o storage é efêmero: o registro pode existir sem o arquivo.
+    disponivel: storedFileExists(d.filePath),
   }));
 
   const totalSize = documents.reduce((acc, d) => acc + d.size, 0);
@@ -149,6 +152,15 @@ export default async function VendasDocumentosPage() {
                         <Badge variant={documentTypeVariant(doc.type)}>
                           {documentTypeLabel(doc.type)}
                         </Badge>
+                        {!doc.disponivel && (
+                          <Badge
+                            variant="outline"
+                            className="gap-1 border-amber-300 bg-amber-50 text-amber-800"
+                          >
+                            <AlertTriangle className="h-3 w-3" />
+                            Arquivo não está no servidor
+                          </Badge>
+                        )}
                       </div>
                       <div className="mt-0.5 text-xs text-slate-500">
                         <Link
@@ -166,21 +178,54 @@ export default async function VendasDocumentosPage() {
                       </div>
                     </div>
 
-                    <form
-                      action={async () => {
-                        "use server";
-                        await deleteDocumentAction(doc.id);
-                      }}
-                    >
-                      <Button
-                        type="submit"
-                        variant="ghost"
-                        size="sm"
-                        title="Excluir"
+                    <div className="flex shrink-0 items-center gap-1">
+                      {doc.disponivel && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="Abrir documento"
+                            asChild
+                          >
+                            <a
+                              href={`/api/documents/${doc.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5 text-slate-600" />
+                              <span className="ml-1.5 text-xs">Abrir</span>
+                            </a>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="Baixar documento"
+                            asChild
+                          >
+                            <a href={`/api/documents/${doc.id}?download=1`}>
+                              <Download className="h-3.5 w-3.5 text-slate-600" />
+                              <span className="ml-1.5 text-xs">Baixar</span>
+                            </a>
+                          </Button>
+                        </>
+                      )}
+
+                      <form
+                        action={async () => {
+                          "use server";
+                          await deleteDocumentAction(doc.id);
+                        }}
                       >
-                        <Trash2 className="h-3 w-3 text-red-600" />
-                      </Button>
-                    </form>
+                        <Button
+                          type="submit"
+                          variant="ghost"
+                          size="sm"
+                          title="Excluir"
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-red-600" />
+                        </Button>
+                      </form>
+                    </div>
                   </div>
                 ))}
               </div>

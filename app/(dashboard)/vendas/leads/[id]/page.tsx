@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   User,
   GraduationCap,
+  ExternalLink,
 } from "lucide-react";
 import {
   Card,
@@ -291,7 +292,26 @@ export default async function LeadDetailPage({
                     <div className="text-sm font-medium">{doc.label}</div>
                     {doc.present ? (
                       <div className="text-xs text-slate-500">
-                        {lead.documents.find((d) => d.type === doc.type)?.fileName}
+                        {(() => {
+                          const docId = lead.documents.find(
+                            (d) => d.type === doc.type
+                          )?.id;
+                          const fileName = lead.documents.find(
+                            (d) => d.type === doc.type
+                          )?.fileName;
+                          if (!docId) return fileName;
+                          return (
+                            <a
+                              href={`/api/documents/${docId}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 font-medium text-direta-orange hover:underline"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              {fileName}
+                            </a>
+                          );
+                        })()}
                       </div>
                     ) : (
                       <div className="text-xs text-amber-600">Pendente</div>
