@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { DocumentType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { writeFile, mkdir } from "fs/promises";
@@ -16,15 +17,9 @@ export type ActionState = {
 
 const uploadSchema = z.object({
   leadId: z.string().cuid(),
-  type: z.enum([
-    "RG",
-    "CPF",
-    "COMPRO_ENDERECO",
-    "COMPRO_PAGAMENTO",
-    "FOTO_ALUNO",
-    "HISTORICO_ESCOLAR",
-    "OUTRO",
-  ]),
+  // Aceita todos os tipos do enum do banco (inclui os legados),
+  // para não rejeitar upload de registro antigo.
+  type: z.nativeEnum(DocumentType),
   description: z.string().max(200).optional(),
 });
 

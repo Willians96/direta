@@ -15,25 +15,10 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { formatDateTime } from "@/lib/utils";
 import { deleteDocumentAction } from "@/lib/actions/documents";
+import { documentTypeLabel, documentTypeVariant } from "@/lib/document-types";
 import { UploadDialog, FileIcon } from "./upload-dialog";
 
 export const dynamic = "force-dynamic";
-
-const DOC_LABELS: Record<string, string> = {
-  CPF: "CPF",
-  RG: "RG",
-  COMPROVANTE_RESIDENCIA: "Comprovante de Residência",
-  HISTORICO_ESCOLAR: "Histórico Escolar",
-  OUTRO: "Outro",
-};
-
-const DOC_VARIANTS: Record<string, "default" | "info" | "warning" | "success" | "neutral"> = {
-  CPF: "info",
-  RG: "info",
-  COMPROVANTE_RESIDENCIA: "warning",
-  HISTORICO_ESCOLAR: "success",
-  OUTRO: "neutral",
-};
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -161,8 +146,8 @@ export default async function VendasDocumentosPage() {
                         <span className="font-medium text-slate-800 truncate">
                           {doc.fileName}
                         </span>
-                        <Badge variant={DOC_VARIANTS[doc.type]}>
-                          {DOC_LABELS[doc.type]}
+                        <Badge variant={documentTypeVariant(doc.type)}>
+                          {documentTypeLabel(doc.type)}
                         </Badge>
                       </div>
                       <div className="mt-0.5 text-xs text-slate-500">

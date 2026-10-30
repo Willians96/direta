@@ -26,6 +26,10 @@ import {
   uploadDocumentAction,
   type ActionState,
 } from "@/lib/actions/documents";
+import {
+  DOCUMENT_TYPE_LABELS,
+  UPLOADABLE_DOCUMENT_TYPES,
+} from "@/lib/document-types";
 
 interface UploadDialogProps {
   leads: Array<{ id: string; fullName: string }>;
@@ -112,19 +116,11 @@ export function UploadDialog({ leads }: UploadDialogProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="RG">RG</SelectItem>
-                <SelectItem value="CPF">CPF</SelectItem>
-                <SelectItem value="COMPRO_ENDERECO">
-                  Comprovante de endereço
-                </SelectItem>
-                <SelectItem value="COMPRO_PAGAMENTO">
-                  Comprovante de pagamento
-                </SelectItem>
-                <SelectItem value="FOTO_ALUNO">Foto do aluno</SelectItem>
-                <SelectItem value="HISTORICO_ESCOLAR">
-                  Histórico escolar
-                </SelectItem>
-                <SelectItem value="OUTRO">Outro</SelectItem>
+                {UPLOADABLE_DOCUMENT_TYPES.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {DOCUMENT_TYPE_LABELS[t]}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
