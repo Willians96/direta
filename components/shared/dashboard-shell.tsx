@@ -40,8 +40,10 @@ export function DashboardShell({
     // scroll container e quebraria o `sticky` do header.
     // O clip de overflow acontece no <main>.
     <div className="flex min-h-screen w-full bg-slate-50">
-      {/* Sidebar desktop */}
-      <div className="hidden md:block md:shrink-0">
+      {/* Sidebar desktop — fixo no topo, ocupando a altura da tela.
+          `self-start` impede o flex de esticar o item, e `sticky` o mantém
+          ancorado enquanto a página rola (sem "buraco" branco no fim). */}
+      <div className="hidden md:sticky md:top-0 md:block md:h-screen md:shrink-0 md:self-start">
         <Sidebar role={user.role} />
       </div>
 

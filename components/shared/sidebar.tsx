@@ -98,7 +98,7 @@ export function Sidebar({
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 space-y-6 overflow-y-auto overflow-x-hidden p-4">
+      <nav className="scrollbar-hidden flex-1 space-y-5 overflow-y-auto overflow-x-hidden p-4">
         {Object.entries(groupedItems).map(([area, areaItems]) => (
           <div key={area}>
             <div className="mb-2 px-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
