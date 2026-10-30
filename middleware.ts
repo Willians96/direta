@@ -7,6 +7,7 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
   "/captacao": ["ADMIN", "CAPTACAO"],
   "/vendas": ["ADMIN", "VENDAS"],
   "/recepcao": ["ADMIN", "RECEPCAO"],
+  "/alunos": ["ADMIN", "RECEPCAO"],
 };
 
 // Arquivos estáticos (imagens, ícones, fontes) nunca devem passar pelo

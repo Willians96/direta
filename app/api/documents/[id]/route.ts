@@ -13,7 +13,8 @@ export const dynamic = "force-dynamic";
  *
  * Regras:
  *  - só quem está logado;
- *  - ADMIN vê tudo, demais usuários só os documentos dos leads atribuídos a eles;
+ *  - ADMIN e RECEPÇÃO veem tudo, demais usuários só os documentos dos leads
+ *    atribuídos a eles;
  *  - nada de HTML/SVG servido inline (evita XSS no mesmo domínio) — esses vão
  *    sempre como attachment.
  */
@@ -99,7 +100,7 @@ export async function GET(
     return erro(req, 404, "Documento não encontrado", "O registro pode ter sido excluído.");
   }
 
-  if (role !== "ADMIN" && doc.lead.assignedToId !== userId) {
+  if (role !== "ADMIN" && role !== "RECEPCAO" && doc.lead.assignedToId !== userId) {
     return erro(
       req,
       403,
