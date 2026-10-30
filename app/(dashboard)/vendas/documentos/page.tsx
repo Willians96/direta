@@ -16,7 +16,7 @@ import { auth } from "@/lib/auth";
 import { formatDateTime } from "@/lib/utils";
 import { deleteDocumentAction } from "@/lib/actions/documents";
 import { documentTypeLabel, documentTypeVariant } from "@/lib/document-types";
-import { storedFileExists } from "@/lib/storage";
+import { storedFileExists, STORAGE_IS_TEMPORARY } from "@/lib/storage";
 import { UploadDialog, FileIcon } from "./upload-dialog";
 
 export const dynamic = "force-dynamic";
@@ -234,10 +234,23 @@ export default async function VendasDocumentosPage() {
         </Card>
 
         <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-          💡 <strong>Ambiente de produção:</strong> em deploy serverless (Vercel),
-          os arquivos são guardados em storage local efêmero. Para uso definitivo,
-          configure <strong>Vercel Blob</strong> ou S3 — instruções em{" "}
-          <code>README_DEPLOY.md</code>.
+          {STORAGE_IS_TEMPORARY ? (
+            <>
+              ⚠️ <strong>Armazenamento temporário:</strong> este deploy usa um
+              armazenamento que <strong>não sobrevive a novos deploys</strong> — os
+              arquivos enviados podem sumir (a tela avisa com o selo{" "}
+              <em>&ldquo;Arquivo não está no servidor&rdquo;</em>). Basta reenviar o
+              documento. Em produção definitiva (VPS), o disco é permanente; na
+              Vercel, use <strong>Vercel Blob</strong> ou S3 — instruções em{" "}
+              <code>README_DEPLOY.md</code>.
+            </>
+          ) : (
+            <>
+              💡 <strong>Armazenamento local persistente:</strong> os arquivos ficam
+              no servidor, em disco. Para trocar por <strong>Vercel Blob</strong> ou
+              S3, veja <code>README_DEPLOY.md</code>.
+            </>
+          )}
         </div>
       </div>
     </div>

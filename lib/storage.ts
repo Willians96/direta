@@ -1,19 +1,49 @@
 import path from "path";
-import { existsSync, statSync } from "fs";
+import os from "os";
+import { existsSync, statSync, mkdirSync, accessSync, constants } from "fs";
 
 /**
  * Storage de documentos (filesystem local).
  *
- * Os arquivos ficam em `${STORAGE_PATH}/leads/<leadId>/<uuid><ext>` e o banco
+ * Os arquivos ficam em `${STORAGE_ROOT}/leads/<leadId>/<uuid><ext>` e o banco
  * guarda apenas o caminho RELATIVO (`leads/<leadId>/<uuid><ext>`), para que o
  * diretório de storage possa mudar de lugar sem quebrar os registros.
  *
- * Atenção: na Vercel o filesystem é efêmero — o arquivo se perde no próximo
- * deploy. Na VPS (STORAGE_PATH=/var/app/storage) o disco é persistente.
+ * Ambientes:
+ *  - VPS (STORAGE_PATH=/var/app/storage): disco persistente, sobrevive a deploy.
+ *  - Vercel: o filesystem do app é SOMENTE LEITURA (/var/task) — o upload
+ *    falharia com EROFS. Nesse caso caímos automaticamente em /tmp, que é
+ *    gravável, mas temporário: os arquivos se perdem a cada novo deploy.
+ *    (A solução definitiva na Vercel seria Vercel Blob/S3 — ver README_DEPLOY.md)
  */
 
+function isWritable(dir: string): boolean {
+  try {
+    mkdirSync(dir, { recursive: true });
+    accessSync(dir, constants.W_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function resolveStorageRoot(): string {
+  const configured = process.env.STORAGE_PATH ?? "./storage";
+  const primary = path.resolve(configured);
+  if (isWritable(primary)) return primary;
+
+  // Fallback (Vercel): /tmp é gravável, mas não é persistente
+  const fallback = path.join(os.tmpdir(), "gescola-storage");
+  mkdirSync(fallback, { recursive: true });
+  return fallback;
+}
+
 /** Raiz do storage, sempre absoluta. */
-export const STORAGE_ROOT = path.resolve(process.env.STORAGE_PATH ?? "./storage");
+export const STORAGE_ROOT = resolveStorageRoot();
+
+/** True quando estamos no fallback temporário (ex.: Vercel). */
+export const STORAGE_IS_TEMPORARY =
+  path.resolve(process.env.STORAGE_PATH ?? "./storage") !== STORAGE_ROOT;
 
 /**
  * Resolve um caminho relativo do banco para um caminho absoluto seguro.
