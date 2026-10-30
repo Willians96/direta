@@ -24,7 +24,10 @@ import { registerFollowupAction } from "@/lib/actions/followups";
 
 const schema = z.object({
   type: z.nativeEnum(FollowupType),
-  salesStatus: z.nativeEnum(SalesStatus).optional(),
+  // O select traz "" quando o vendedor deixa "Não alterar". Sem aceitar a
+  // string vazia a validação do formulário falhava e o follow-up não era
+  // gravado (nada acontecia ao clicar em "Registrar").
+  salesStatus: z.union([z.nativeEnum(SalesStatus), z.literal("")]).optional(),
   notes: z.string().max(2000).optional(),
   occurredAt: z.string().optional(),
   nextAction: z.string().optional(),
@@ -79,7 +82,7 @@ export function RegisterFollowupDialog({
         await registerFollowupAction({
           leadId,
           type: data.type,
-          salesStatus: data.salesStatus,
+          salesStatus: data.salesStatus || undefined,
           notes: data.notes || undefined,
           occurredAt: data.occurredAt ? new Date(data.occurredAt).toISOString() : undefined,
           nextAction: data.nextAction ? new Date(data.nextAction).toISOString() : undefined,
