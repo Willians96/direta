@@ -590,7 +590,7 @@ export default async function AdminRelatoriosPage({
         </div>
 
         <p className="text-xs text-slate-500">
-          Período analyzed: {data.period.from.toLocaleDateString("pt-BR")} até{" "}
+          Período analisado: {data.period.from.toLocaleDateString("pt-BR")} até{" "}
           {data.period.to.toLocaleDateString("pt-BR")} ·{" "}
           {monthLabel(data.period.months[0].month, data.period.months[0].year)}
           {data.period.months.length > 1 &&
