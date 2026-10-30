@@ -28,16 +28,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ATENÇÃO: o pnpm precisa existir ANTES do setup-node,
+      # senão o cache: "pnpm" do setup-node falha ("Unable to locate executable file: pnpm").
+      - name: Install pnpm 12.4.1
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.1
+
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "pnpm"
-
-      - name: Install pnpm 12.4.1
-        run: |
-          corepack enable
-          corepack prepare pnpm@12.4.1 --activate
-          pnpm --version
 
       - run: pnpm install --frozen-lockfile
 

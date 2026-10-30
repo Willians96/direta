@@ -132,6 +132,8 @@ ou, pelo GitHub Actions, disparo manual em **Actions → Deploy to VPS → Run w
 workflow só dispara por `workflow_dispatch` enquanto não houver VPS; ver seção 7).
 
 Secrets no GitHub: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `DOMAIN`, `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`.
+Variável do repositório: `VPS_ENABLED = true` (Settings → Secrets and variables → Actions → Variables) —
+é ela que habilita o job, já que o contexto `secrets` não pode ser usado no `if` de um job.
 
 ### Backup e restauração
 
