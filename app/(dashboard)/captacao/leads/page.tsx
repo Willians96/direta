@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/shared/page-header";
+import { AssignSellerSelect } from "@/components/shared/leads/assign-seller-select";
 import {
   SalesStatusBadge,
   SALES_STATUS_OPTIONS,
@@ -166,7 +167,7 @@ export default async function LeadsPage({
   if (courseFilter) where.courseId = courseFilter;
   if (semFollowup) where.followups = { none: {} };
 
-  const [leads, courses] = await Promise.all([
+  const [leads, courses, vendedores] = await Promise.all([
     prisma.lead.findMany({
       where,
       include: {
@@ -179,6 +180,11 @@ export default async function LeadsPage({
     }),
     prisma.course.findMany({
       where: { status: "ATIVO" },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.user.findMany({
+      where: { role: "VENDAS", status: "ATIVO" },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
@@ -481,10 +487,12 @@ export default async function LeadsPage({
                         </td>
 
                         {/* VENDE */}
-                        <td className="px-3 py-3 text-xs text-slate-500 md:px-4">
-                          {lead.assignedTo?.name ?? (
-                            <span className="text-amber-600">Não atribuído</span>
-                          )}
+                        <td className="px-3 py-3 md:px-4">
+                          <AssignSellerSelect
+                            leadId={lead.id}
+                            currentId={lead.assignedTo?.id ?? null}
+                            vendedores={vendedores}
+                          />
                         </td>
 
                         {/* ATUALIZADO */}
