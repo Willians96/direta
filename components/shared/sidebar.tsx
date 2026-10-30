@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -66,15 +65,17 @@ const AREA_LABELS: Record<string, string> = {
   recepcao: "Recepção",
 };
 
-/** Chave de persistência dos tópicos recolhidos no localStorage. */
-const STORAGE_KEY = "direta:sidebar-topicos";
-
 export function Sidebar({
   role,
   onClose,
+  openArea,
+  onToggleArea,
 }: {
   role: UserRole;
   onClose?: () => void;
+  /** Tópico em aberto (acordeão — apenas um por vez). null = nenhum. */
+  openArea?: string | null;
+  onToggleArea?: (area: string) => void;
 }) {
   const pathname = usePathname();
   const items = NAV_ITEMS.filter((item) => item.roles.includes(role));
@@ -86,61 +87,7 @@ export function Sidebar({
     return acc;
   }, {});
 
-  // Áreas disponíveis para este perfil (estável entre renders)
-  const allAreas = useMemo(() => Object.keys(groupedItems), [groupedItems]);
-
-  // Tópicos abertos. null = nenhum ajuste manual (todos abertos por padrão).
-  const [openAreas, setOpenAreas] = useState<string[] | null>(null);
-  const [hydrated, setHydrated] = useState(false);
-
-  // Restaura o estado salvo no navegador
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) setOpenAreas(parsed as string[]);
-      }
-    } catch {
-      /* localStorage indisponível */
-    }
-    setHydrated(true);
-  }, []);
-
-  // Persiste o estado
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(openAreas));
-    } catch {
-      /* localStorage indisponível */
-    }
-  }, [openAreas, hydrated]);
-
-  // Ao navegar, garante que o tópico da rota atual fique aberto
-  useEffect(() => {
-    const area = pathname.split("/")[1];
-    if (!area) return;
-    setOpenAreas((prev) => {
-      const current = prev === null ? allAreas : prev;
-      if (current.includes(area)) return prev;
-      return [...current, area];
-    });
-  }, [pathname, allAreas]);
-
-  const isAreaOpen = (area: string) =>
-    openAreas === null ? true : openAreas.includes(area);
-
-  // Acordeão: abrir um tópico fecha os demais
-  const toggleArea = (area: string) =>
-    setOpenAreas((prev) => {
-      const current = prev === null ? allAreas : prev;
-      const isOnlyOpen = current.length === 1 && current[0] === area;
-      // Clicar no único tópico aberto fecha tudo
-      if (isOnlyOpen) return current.filter((a) => a !== area);
-      // Clicar em qualquer outro abre só ele
-      return [area];
-    });
+  const isAreaOpen = (area: string) => openArea === area;
 
   return (
     <aside className="flex h-screen w-64 flex-col bg-slate-900 text-slate-100">
@@ -168,7 +115,7 @@ export function Sidebar({
               {/* Cabeçalho do tópico (retrátil) */}
               <button
                 type="button"
-                onClick={() => toggleArea(area)}
+                onClick={() => onToggleArea?.(area)}
                 aria-expanded={isOpen}
                 aria-controls={`topico-${area}`}
                 className="mb-1 flex w-full items-center justify-between rounded px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 transition-colors hover:bg-slate-800/40 hover:text-slate-400"

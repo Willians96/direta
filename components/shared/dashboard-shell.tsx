@@ -20,10 +20,24 @@ export function DashboardShell({
   const [navOpen, setNavOpen] = useState(false);
   const pathname = usePathname();
 
+  // Tópico do menu em aberto (acordeão: apenas um por vez).
+  // null = nenhum tópico aberto.
+  const [openArea, setOpenArea] = useState<string | null>(null);
+
   // Fecha o menu ao navegar (mobile)
   useEffect(() => {
     setNavOpen(false);
   }, [pathname]);
+
+  // O tópico correspondente à rota atual fica aberto
+  useEffect(() => {
+    const area = pathname.split("/")[1];
+    if (area) setOpenArea(area);
+  }, [pathname]);
+
+  // Clicar num tópico abre só ele (fecha o que estiver aberto)
+  const toggleArea = (area: string) =>
+    setOpenArea((prev) => (prev === area ? null : area));
 
   // Bloqueia scroll do body quando o drawer está aberto
   useEffect(() => {
@@ -44,7 +58,7 @@ export function DashboardShell({
           `self-start` impede o flex de esticar o item, e `sticky` o mantém
           ancorado enquanto a página rola (sem "buraco" branco no fim). */}
       <div className="hidden md:sticky md:top-0 md:block md:h-screen md:shrink-0 md:self-start">
-        <Sidebar role={user.role} />
+        <Sidebar role={user.role} openArea={openArea} onToggleArea={toggleArea} />
       </div>
 
       {/* Drawer mobile */}
@@ -61,7 +75,12 @@ export function DashboardShell({
         }`}
         aria-hidden={!navOpen}
       >
-        <Sidebar role={user.role} onClose={() => setNavOpen(false)} />
+        <Sidebar
+          role={user.role}
+          onClose={() => setNavOpen(false)}
+          openArea={openArea}
+          onToggleArea={toggleArea}
+        />
       </div>
 
       {/* Conteúdo */}
