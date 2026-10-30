@@ -62,12 +62,43 @@ apresentação, ou suba a VPS antes.
 
 ## 3️⃣ Provisionar Vercel Blob (storage de documentos)
 
-1. No projeto Vercel → **Storage** → **Create** → **Blob**
-2. Aceite a integração (cria a env var `BLOB_READ_WRITE_TOKEN` automaticamente)
-3. O token é gerado com permissões de leitura/escrita
+> ✅ **Já implementado no código.** O app detecta a variável `BLOB_READ_WRITE_TOKEN` e passa a
+> gravar/ler os documentos no Vercel Blob automaticamente. Sem essa variável, ele usa o filesystem
+> local (que na Vercel é temporário — o arquivo se perde a cada deploy).
 
-> **Importante:** o plano original previa filesystem em `/var/app/storage/` — serverless na Vercel **não tem disco persistente**, então **toda referência a `STORAGE_PATH` precisa migrar para o Vercel Blob**.
-> Vamos ajustar isso nas próximas sprints (módulo de documentos).
+**Como ativar (2 minutos, no painel):**
+
+1. No projeto Vercel → aba **Storage** → **Create** → **Blob store**
+2. Nome sugerido: `gescola-docs` → **Connect** (vincula ao projeto)
+3. A Vercel cria a variável **`BLOB_READ_WRITE_TOKEN`** no projeto — confirme que ela está marcada
+   para **Production** (e **Preview**, se quiser testar em preview)
+4. Salve a tela de environment variables. O próximo deploy passa a usar o Blob
+
+**Como fica a partir daí:**
+
+| Item | Com Blob | Sem Blob (filesystem) |
+|---|---|---|
+| Onde o arquivo fica | `leads/<leadId>/<uuid>.<ext>` no Blob | `/tmp/gescola-storage/...` (Vercel) ou `/var/app/storage/...` (VPS) |
+| Sobrevive a deploy | ✅ | ❌ na Vercel |
+| Acesso | Privado (somente via rota autenticada `/api/documents/[id]`) | idem |
+| Aviso na tela | "Armazenamento em nuvem (Vercel Blob)" | "Armazenamento temporário" |
+
+> Na **VPS** o filesystem local é o caminho natural (disco persistente em `/var/app/storage`) e
+> funciona sem nenhum serviço extra — o Blob só é necessário enquanto o sistema roda na Vercel.
+
+---
+
+## 3.1 Storage de documentos — referência rápida
+
+| Ambiente | `BLOB_READ_WRITE_TOKEN` | Onde grava | Persistência |
+|---|---|---|---|
+| Vercel (demo) | definido | Vercel Blob | total |
+| Vercel (sem token) | vazio | `/tmp/gescola-storage` | some a cada deploy |
+| VPS Hostinger | vazio | `/var/app/storage` | total (disco) |
+
+A rota de leitura `/api/documents/[id]` valida perfil (ADMIN vê tudo; demais veem só os leads
+atribuídos), serve PDF/imagem inline e **anexa** os demais tipos (HTML e SVG nunca são abertos
+inline, para não virar XSS no mesmo domínio).
 
 ---
 

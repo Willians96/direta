@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createReadStream, statSync } from "fs";
-import { Readable } from "stream";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { resolveStoredFile } from "@/lib/storage";
+import { openStoredFile } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +30,16 @@ function wantsHtml(req: NextRequest): boolean {
   return (req.headers.get("accept") ?? "").includes("text/html");
 }
 
+/** Escapa HTML (o nome do lead vem do banco e pode conter caracteres especiais). */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function erro(req: NextRequest, status: number, titulo: string, detalhe: string) {
   if (!wantsHtml(req)) {
     return NextResponse.json({ ok: false, error: titulo, detail: detalhe }, { status });
@@ -42,7 +50,7 @@ function erro(req: NextRequest, status: number, titulo: string, detalhe: string)
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>${titulo} · Direta Cursos</title>
+    <title>${escapeHtml(titulo)} · Direta Cursos</title>
     <style>
       body { margin: 0; min-height: 100vh; display: flex; align-items: center;
              justify-content: center; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -57,8 +65,8 @@ function erro(req: NextRequest, status: number, titulo: string, detalhe: string)
   </head>
   <body>
     <div class="card">
-      <h1>${titulo}</h1>
-      <p>${detalhe}</p>
+      <h1>${escapeHtml(titulo)}</h1>
+      <p>${escapeHtml(detalhe)}</p>
       <a href="/vendas/documentos">Voltar para Documentos</a>
     </div>
   </body>
@@ -100,40 +108,29 @@ export async function GET(
     );
   }
 
-  const filePath = resolveStoredFile(doc.filePath);
-  if (!filePath) {
-    return erro(req, 400, "Arquivo inválido", "O caminho do arquivo no banco não é válido.");
-  }
-
-  let size: number;
-  try {
-    const stat = statSync(filePath);
-    if (!stat.isFile()) throw new Error("não é arquivo");
-    size = stat.size;
-  } catch {
+  const stored = await openStoredFile(doc.filePath);
+  if (!stored) {
     return erro(
       req,
       404,
       "Arquivo indisponível",
-      "O arquivo não está mais no servidor (na Vercel o armazenamento é temporário e se perde a cada deploy). Reenvie o documento."
+      "O arquivo não está mais disponível no servidor. Sem armazenamento persistente configurado, o arquivo se perde a cada novo deploy — reenvie o documento."
     );
   }
 
-  const mimeType = doc.mimeType || "application/octet-stream";
+  const mimeType = doc.mimeType || stored.mimeType || "application/octet-stream";
   const forcarDownload = req.nextUrl.searchParams.get("download") === "1";
   const inline = !forcarDownload && INLINE_SAFE_TYPES.has(mimeType.toLowerCase());
 
   const safeName = (doc.fileName || "documento").replace(/[^\w.\- ]/g, "_");
 
-  const stream = Readable.toWeb(createReadStream(filePath)) as ReadableStream;
+  const headers: Record<string, string> = {
+    "Content-Type": mimeType,
+    "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${safeName}"`,
+    "Cache-Control": "private, no-store",
+    "X-Content-Type-Options": "nosniff",
+  };
+  if (stored.size) headers["Content-Length"] = String(stored.size);
 
-  return new NextResponse(stream, {
-    headers: {
-      "Content-Type": mimeType,
-      "Content-Length": String(size),
-      "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${safeName}"`,
-      "Cache-Control": "private, no-store",
-      "X-Content-Type-Options": "nosniff",
-    },
-  });
+  return new NextResponse(stored.stream, { headers });
 }

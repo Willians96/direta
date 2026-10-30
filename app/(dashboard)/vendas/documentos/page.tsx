@@ -16,7 +16,7 @@ import { auth } from "@/lib/auth";
 import { formatDateTime } from "@/lib/utils";
 import { deleteDocumentAction } from "@/lib/actions/documents";
 import { documentTypeLabel, documentTypeVariant } from "@/lib/document-types";
-import { storedFileExists, STORAGE_IS_TEMPORARY } from "@/lib/storage";
+import { storedFileExists, blobEnabled, STORAGE_IS_TEMPORARY } from "@/lib/storage";
 import { UploadDialog, FileIcon } from "./upload-dialog";
 
 export const dynamic = "force-dynamic";
@@ -62,12 +62,14 @@ export default async function VendasDocumentosPage() {
   });
   const uploaderMap = new Map(uploaders.map((u) => [u.id, u.name]));
 
-  const documents = documentsRaw.map((d) => ({
-    ...d,
-    uploaderName: uploaderMap.get(d.uploadedById) ?? "Desconhecido",
-    // Na Vercel o storage é efêmero: o registro pode existir sem o arquivo.
-    disponivel: storedFileExists(d.filePath),
-  }));
+  const documents = await Promise.all(
+    documentsRaw.map(async (d) => ({
+      ...d,
+      uploaderName: uploaderMap.get(d.uploadedById) ?? "Desconhecido",
+      // Sem armazenamento persistente, o registro pode existir sem o arquivo.
+      disponivel: await storedFileExists(d.filePath),
+    }))
+  );
 
   const totalSize = documents.reduce((acc, d) => acc + d.size, 0);
 
@@ -234,7 +236,12 @@ export default async function VendasDocumentosPage() {
         </Card>
 
         <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-          {STORAGE_IS_TEMPORARY ? (
+          {blobEnabled() ? (
+            <>
+              💡 <strong>Armazenamento em nuvem (Vercel Blob):</strong> os arquivos
+              ficam persistidos e sobrevivem a novos deploys.
+            </>
+          ) : STORAGE_IS_TEMPORARY ? (
             <>
               ⚠️ <strong>Armazenamento temporário:</strong> este deploy usa um
               armazenamento que <strong>não sobrevive a novos deploys</strong> — os

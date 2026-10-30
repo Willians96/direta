@@ -5,8 +5,7 @@ import { revalidatePath } from "next/cache";
 import { DocumentType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { STORAGE_ROOT, toStoredRelativePath } from "@/lib/storage";
-import { writeFile, mkdir } from "fs/promises";
+import { saveStoredFile, deleteStoredFile } from "@/lib/storage";
 import path from "path";
 import { randomUUID } from "crypto";
 
@@ -72,23 +71,23 @@ export async function uploadDocumentAction(
       };
     }
 
-    // Grava arquivo
+    // Grava arquivo (Blob quando configurado; senão, filesystem local)
     const bytes = Buffer.from(await file.arrayBuffer());
     const fileExt = path.extname(file.name) || "";
     const safeName = `${randomUUID()}${fileExt}`;
-    const leadDir = path.join(STORAGE_ROOT, "leads", parsed.data.leadId);
-    await mkdir(leadDir, { recursive: true });
-    const filePath = path.join(leadDir, safeName);
-    await writeFile(filePath, bytes);
+    const pathname = `leads/${parsed.data.leadId}/${safeName}`;
+    const mimeType = file.type || "application/octet-stream";
+
+    const reference = await saveStoredFile({ pathname, bytes, mimeType });
 
     const doc = await prisma.document.create({
       data: {
         leadId: parsed.data.leadId,
         type: parsed.data.type as any,
         fileName: file.name,
-        filePath: toStoredRelativePath(filePath),
+        filePath: reference,
         size: file.size,
-        mimeType: file.type || "application/octet-stream",
+        mimeType,
         uploadedById: userId,
       },
     });
@@ -111,7 +110,16 @@ export async function uploadDocumentAction(
 
     return { ok: true, message: "📎 Documento enviado!" };
   } catch (e: any) {
-    return { ok: false, error: e.message ?? "Erro ao enviar documento." };
+    const raw = String(e?.message ?? e);
+    // Disco somente-leitura (serverless) ou espaço insuficiente
+    if (/EROFS|read-only file system|ENOSPC|no space left/i.test(raw)) {
+      return {
+        ok: false,
+        error:
+          "Não foi possível gravar o arquivo neste ambiente (armazenamento indisponível). Tente novamente em instantes.",
+      };
+    }
+    return { ok: false, error: raw || "Erro ao enviar documento." };
   }
 }
 
@@ -130,6 +138,9 @@ export async function deleteDocumentAction(id: string): Promise<void> {
   if (role !== "ADMIN" && doc.lead.assignedToId !== userId) return;
 
   await prisma.document.delete({ where: { id } });
+
+  // remove também o arquivo do storage (Blob ou disco)
+  await deleteStoredFile(doc.filePath);
 
   await prisma.enrollmentAudit.create({
     data: {
