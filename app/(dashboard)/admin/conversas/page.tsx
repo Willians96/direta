@@ -135,7 +135,7 @@ export default async function ConversasPage() {
             {conversas.length === 0 ? (
               <div className="rounded-md border border-dashed p-12 text-center text-sm text-slate-500">
                 Nenhuma conversa registrada ainda. Vendedores podem registrar
-                pelo botão "Abrir Conversa" na página do lead.
+                pelo botão &quot;Abrir Conversa&quot; na página do lead.
               </div>
             ) : (
               <div className="divide-y">

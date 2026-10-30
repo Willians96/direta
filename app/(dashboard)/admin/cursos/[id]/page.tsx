@@ -270,7 +270,7 @@ export default async function AdminCursoDetalhePage({
                 Nenhuma turma cadastrada para este curso.
                 <br />
                 <span className="text-xs">
-                  Clique em "Nova turma" no topo para criar.
+                  Clique em &quot;Nova turma&quot; no topo para criar.
                 </span>
               </div>
             ) : (

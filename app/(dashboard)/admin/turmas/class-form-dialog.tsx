@@ -288,7 +288,7 @@ export function ClassFormDialog({ courses, professors, cls }: ClassFormDialogPro
                 placeholder="Ex: 19h-22h"
                 defaultValue={(cls?.schedule?.time as string) ?? ""}
               />
-              <p className="text-xs text-slate-500">Texto livre (ex: "19h às 22h")</p>
+              <p className="text-xs text-slate-500">Texto livre (ex: &quot;19h às 22h&quot;)</p>
             </div>
             <div className="space-y-2">
               <Label>Professor</Label>

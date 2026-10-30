@@ -127,7 +127,7 @@ export default async function VendasDocumentosPage() {
                 Nenhum documento enviado ainda.
                 <br />
                 <span className="text-xs">
-                  Clique em "Enviar documento" pra começar.
+                  Clique em &quot;Enviar documento&quot; pra começar.
                 </span>
               </div>
             ) : (

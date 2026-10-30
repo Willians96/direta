@@ -282,7 +282,7 @@ export default async function AdminTurmaDetalhePage({
                 Nenhum aluno matriculado ainda.
                 <br />
                 <span className="text-xs">
-                  Clique em "Matricular aluno" pra adicionar.
+                  Clique em &quot;Matricular aluno&quot; pra adicionar.
                 </span>
               </div>
             ) : (

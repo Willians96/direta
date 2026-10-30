@@ -84,7 +84,7 @@ function LoginForm() {
         <div className="relative z-10 space-y-6">
           <blockquote className="space-y-2">
             <p className="text-2xl font-medium leading-tight">
-              "O caminho mais rápido para ingressar no mercado de trabalho e dar um UP na sua carreira."
+              &quot;O caminho mais rápido para ingressar no mercado de trabalho e dar um UP na sua carreira.&quot;
             </p>
             <footer className="text-sm text-white/80">
               +16.000 alunos qualificados · Sorocaba · Itapetininga · Jundiaí
