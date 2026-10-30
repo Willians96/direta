@@ -98,10 +98,10 @@ export function Sidebar({
       </div>
 
       {/* Nav */}
-      <nav className="scrollbar-hidden flex-1 space-y-5 overflow-y-auto overflow-x-hidden p-4">
+      <nav className="scrollbar-hidden flex-1 space-y-4 overflow-y-auto overflow-x-hidden p-3">
         {Object.entries(groupedItems).map(([area, areaItems]) => (
           <div key={area}>
-            <div className="mb-2 px-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <div className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
               {AREA_LABELS[area] || area}
             </div>
             <div className="space-y-1">
@@ -114,7 +114,7 @@ export function Sidebar({
                     href={item.href}
                     onClick={onClose}
                     className={cn(
-                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                      "flex items-center gap-3 rounded-md px-3 py-1.5 text-sm transition-colors",
                       isActive
                         ? "bg-direta-orange/15 text-direta-orange font-medium border-l-2 border-direta-orange pl-[10px]"
                         : "text-slate-300 hover:bg-slate-800/60 hover:text-white"
@@ -131,16 +131,16 @@ export function Sidebar({
       </nav>
 
       {/* Footer */}
-      <div className="shrink-0 border-t border-slate-800 p-4">
+      <div className="shrink-0 border-t border-slate-800 p-3">
         <Link
           href="/perfil"
           onClick={onClose}
-          className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800/60 hover:text-white"
+          className="flex items-center gap-3 rounded-md px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800/60 hover:text-white"
         >
           <Settings className="h-4 w-4 shrink-0" />
           <span className="truncate">Configurações</span>
         </Link>
-        <div className="mt-3 px-3 text-[10px] text-slate-500">
+        <div className="mt-2 px-3 text-[10px] text-slate-500">
           v0.1.0 · Fase 1
         </div>
       </div>
