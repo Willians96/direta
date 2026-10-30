@@ -56,12 +56,12 @@ const NAV_ITEMS: NavItem[] = [
   { title: "Meus Alertas", href: "/vendas/alertas", icon: AlertTriangle, roles: ["VENDAS"] },
   { title: "Documentos", href: "/vendas/documentos", icon: FileText, roles: ["ADMIN", "VENDAS"] },
 
-  // Alunos (cadastro do aluno)
-  { title: "Alunos", href: "/alunos", icon: UsersRound, roles: ["ADMIN", "RECEPCAO"] },
-
   // Recepção
   { title: "Painel", href: "/recepcao", icon: LayoutDashboard, roles: ["ADMIN", "RECEPCAO"] },
   { title: "Fila de Análise", href: "/recepcao/fila", icon: CheckCircle2, roles: ["ADMIN", "RECEPCAO"] },
+
+  // Alunos (cadastro do aluno) — última aba do menu
+  { title: "Alunos", href: "/alunos", icon: UsersRound, roles: ["ADMIN", "RECEPCAO"] },
 ];
 
 const AREA_LABELS: Record<string, string> = {

@@ -30,7 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import { auth } from "@/lib/auth";
-import { formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency, statValueSize } from "@/lib/utils";
 import {
   getReportData,
   getReportOptions,
@@ -623,8 +623,15 @@ function StatCard({
           {titulo}
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <p className="text-2xl font-bold">{valor}</p>
+      <CardContent className="min-w-0">
+        <p
+          className={cn(
+            "font-bold text-slate-900 tabular-nums break-words",
+            statValueSize(valor)
+          )}
+        >
+          {valor}
+        </p>
         <p className="text-xs text-slate-500">{auxiliar}</p>
       </CardContent>
     </Card>

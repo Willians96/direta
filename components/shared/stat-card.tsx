@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { cn, statValueSize } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 
 interface StatCardProps {
@@ -23,6 +23,11 @@ const VARIANT_STYLES = {
   brand: "bg-direta-orange/10 text-direta-orange-dark",
 };
 
+/**
+ * Tamanho da fonte do valor conforme o comprimento do texto.
+ * Valores monetários longos ("R$ 2.690,00") não cabem em text-3xl dentro do
+ * card e estouravam a borda — a fonte se ajusta ao box.
+ */
 export function StatCard({
   title,
   value,
@@ -36,10 +41,15 @@ export function StatCard({
   return (
     <Card>
       <CardContent className="p-5">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 space-y-1">
             <p className="text-sm font-medium text-slate-500">{title}</p>
-            <p className="text-3xl font-bold tracking-tight text-slate-900">
+            <p
+              className={cn(
+                "font-bold tracking-tight text-slate-900 tabular-nums break-words",
+                statValueSize(value)
+              )}
+            >
               {value}
             </p>
             {description && (

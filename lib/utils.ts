@@ -51,3 +51,18 @@ export function maskCurrency(value: string) {
     maximumFractionDigits: 2,
   });
 }
+
+/**
+ * Tamanho da fonte do valor de um card de indicador.
+ *
+ * Valores monetários como "R$ 2.690,00" usam espaço inseparável (U+00A0)
+ * vinda do Intl — a string inteira vira um bloco indivisível e estourava o
+ * card. A fonte diminui conforme o comprimento e o texto pode quebrar.
+ */
+export function statValueSize(value: string | number) {
+  const length = String(value).length;
+  if (length <= 7) return "text-3xl";
+  if (length <= 10) return "text-2xl";
+  if (length <= 14) return "text-xl";
+  return "text-lg";
+}
