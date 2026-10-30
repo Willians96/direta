@@ -1,0 +1,22 @@
+# Scripts de shell executados na VPS precisam de LF (CRLF quebra o bash)
+*.sh text eol=lf
+scripts/*.sh text eol=lf
+
+# Demais scripts versionados
+*.js text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+*.prisma text eol=lf
+*.mjs text eol=lf
+
+# Binários
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.pdf binary
+*.xlsx binary

@@ -86,7 +86,8 @@ gescola/
 │   └── seed.ts                       # Dados iniciais (4 perfis)
 ├── scripts/
 │   ├── setup-vps.sh                  # Setup inicial da VPS
-│   └── deploy.sh                     # Deploy manual
+│   ├── deploy.sh                     # Deploy manual
+│   └── migrate-db-neon-to-vps.sh     # Migração de dados (Neon -> Postgres da VPS)
 ├── .github/workflows/
 │   ├── ci.yml                        # CI em PRs
 │   └── deploy.yml                    # Deploy automático
@@ -135,40 +136,57 @@ NOVO → QUALIFICADO → PROPOSTA_ENVIADA → EM_NEGOCIACAO → AGUARDANDO_ANALI
 
 ---
 
-## 🌐 Deploy na VPS Hostinger
+## 🌐 Deploy na VPS Hostinger (preparado, ainda não ativo)
+
+> **Estado:** o sistema está no ar na **Vercel** (https://direta-ten.vercel.app). A VPS Hostinger
+> ainda **não foi contratada** — o que está no repositório é a preparação para o dia da migração.
+> O guia passo a passo está em **[README_VPS.md](README_VPS.md)**.
 
 ### Pré-requisitos
-- VPS Ubuntu 22.04+ (mínimo 4GB RAM, 2 vCPU, 80GB SSD)
-- Domínio próprio com DNS apontado para a VPS
+- VPS Ubuntu 22.04+ (mínimo 4GB RAM, 2 vCPU, 40GB SSD)
+- Domínio próprio com DNS apontado para a VPS (opcional na fase de teste por IP)
 - Acesso SSH com chave
 
 ### Setup inicial (uma vez)
 ```bash
 # Na VPS, como root:
 chmod +x scripts/setup-vps.sh
-sudo ./scripts/setup-vps.sh
+sudo env DOMAIN="" ./scripts/setup-vps.sh
 ```
 
 O script instala e configura:
-- Node.js 20 LTS + PM2
-- PostgreSQL 16 + banco `gescola`
-- Nginx (proxy reverso)
-- Let's Encrypt (SSL)
+- Node.js 20 LTS + pnpm 12 (via corepack) + PM2 com boot automático
+- PostgreSQL 16 (tuning por RAM, escopo `localhost`, senha `scram-sha-256`) + swap se RAM < 4GB
+- Nginx (proxy reverso, upload de 20 MB, cabeçalhos de segurança, gzip)
 - UFW (firewall) + Fail2ban (anti-brute-force)
-- Backup diário do banco (cron)
+- Backup diário do banco **e** dos documentos (cron)
 
-### Deploy automático (CI/CD)
-Push na `main` dispara `.github/workflows/deploy.yml`:
-1. Roda typecheck + build
-2. Conecta via SSH na VPS
-3. Executa `git pull`, `prisma migrate deploy`, `pnpm build`, `pm2 reload`
-4. Health check em `/api/health`
+### Migração dos dados (Neon → Postgres da VPS)
+```bash
+export NEON_DATABASE_URL="postgresql://...neon.tech/neondb?sslmode=require"
+export DATABASE_URL="postgresql://gescola_app:SENHA@127.0.0.1:5432/gescola?schema=public"
+bash scripts/migrate-db-neon-to-vps.sh
+```
+Faz dump → restore → **confere a contagem de linhas** de cada tabela principal entre origem e destino.
 
-**Secrets necessários no GitHub:**
+### Deploy
+```bash
+# Na VPS:
+cd /var/app && bash scripts/deploy.sh
+```
+1. `git pull` da `main`
+2. `pnpm install --frozen-lockfile` + `pnpm prisma migrate deploy`
+3. `pnpm build`
+4. `pm2 reload --update-env` + `pm2 save`
+5. Health check em `/api/health`
+
+**CI/CD:** o workflow `.github/workflows/deploy.yml` fica em **disparo manual**
+(Actions → *Deploy to VPS* → *Run workflow*) enquanto não houver VPS — ele era disparado em
+todo push na `main` e falhava. Secrets necessários quando for ativado:
 - `VPS_HOST` — IP ou hostname da VPS
 - `VPS_USER` — usuário SSH (ex: `deploy`)
 - `VPS_SSH_KEY` — chave privada SSH
-- `DOMAIN` — domínio da app (ex: `app.direta.com`)
+- `DOMAIN` — domínio da app (ex: `app.diretacursos.com.br`)
 - `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL` — para o build
 
 ---

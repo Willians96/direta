@@ -33,7 +33,11 @@ jobs:
           node-version: "20"
           cache: "pnpm"
 
-      - run: npm install -g pnpm
+      - name: Install pnpm 12.4.1
+        run: |
+          corepack enable
+          corepack prepare pnpm@12.4.1 --activate
+          pnpm --version
 
       - run: pnpm install --frozen-lockfile
 

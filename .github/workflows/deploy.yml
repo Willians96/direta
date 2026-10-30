@@ -1,14 +1,28 @@
 name: Deploy to VPS
 
+# ============================================================
+# ATIVADO APENAS POR DISPARO MANUAL.
+#
+# Antes de existir a VPS Hostinger, este workflow era disparado em TODO push
+# na `main` e falhava (não há host/chave SSH). A partir de agora ele só roda
+# sob demanda — em "Actions → Deploy to VPS → Run workflow" — ou quando o
+# job for reabilitado com `on: push` após a migração.
+# ============================================================
+
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+    inputs:
+      skip_build:
+        description: "Pular o build (apenas migrations + reload)"
+        type: boolean
+        default: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    # Só roda se o segredo estiver configurado (evita falha em forks/sem VPS)
+    if: ${{ secrets.VPS_HOST != '' }}
 
     steps:
       - name: Checkout
@@ -20,8 +34,11 @@ jobs:
           node-version: "20"
           cache: "pnpm"
 
-      - name: Install pnpm
-        run: npm install -g pnpm
+      - name: Install pnpm 12.4.1
+        run: |
+          corepack enable
+          corepack prepare pnpm@12.4.1 --activate
+          pnpm --version
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -47,9 +64,17 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd /var/app
-            bash scripts/deploy.sh
+            bash scripts/deploy.sh ${{ inputs.skip_build && 'SKIP_BUILD=1' || '' }}
 
       - name: Health check
         run: |
-          sleep 10
-          curl -f https://${{ secrets.DOMAIN }}/api/health || exit 1
+          for i in $(seq 1 10); do
+            sleep 10
+            if curl -fsS "http://${{ secrets.VPS_HOST }}:3000/api/health"; then
+              echo "aplicação saudável"
+              exit 0
+            fi
+            echo "aguardando ($i/10)"
+          done
+          echo "health check falhou"
+          exit 1

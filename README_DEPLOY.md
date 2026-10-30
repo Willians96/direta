@@ -2,6 +2,21 @@
 
 > **Status do plano original:** O briefing previa VPS Hostinger (Postgres + Nginx + PM2).
 > **Plano adaptado:** Como o cliente está usando Vercel, este guia cobre a stack equivalente serverless.
+>
+> **Migração para a VPS:** a preparação completa (scripts, runbook e checklist) está em
+> **[README_VPS.md](README_VPS.md)**. Nenhuma infraestrutura é criada antes de a Direta decidir.
+
+---
+
+## ⚠️ Antes de apresentar: documentos na Vercel são efêmeros
+
+O upload de documentos grava em `./storage` (filesystem local). Na Vercel esse disco é
+**temporário**: o arquivo é perdido no próximo deploy da Vercel e o registro no banco continua lá
+apontando para um arquivo inexistente. Na VPS (com `STORAGE_PATH=/var/app/storage`) o problema
+desaparece — o disco é persistente.
+
+**Enquanto o sistema rodar na Vercel:** faça o upload de documentos pouco antes da hora da
+apresentação, ou suba a VPS antes.
 
 ---
 

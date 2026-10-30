@@ -1,6 +1,9 @@
+# Build scripts aprovados explicitamente.
+# Sem isto, um `pnpm install` limpo (CI, Vercel ou VPS) pode pular o download
+# dos engines do Prisma e quebrar o `prisma generate`.
 allowBuilds:
-  '@prisma/client': set this to true or false
-  '@prisma/engines': set this to true or false
-  esbuild: set this to true or false
-  prisma: set this to true or false
-  unrs-resolver: set this to true or false
+  '@prisma/client': true
+  '@prisma/engines': true
+  esbuild: true
+  prisma: true
+  unrs-resolver: true
