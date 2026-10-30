@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -17,6 +18,7 @@ import {
   TrendingUp,
   AlertTriangle,
   MessageCircle,
+  ChevronDown,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -64,6 +66,9 @@ const AREA_LABELS: Record<string, string> = {
   recepcao: "Recepção",
 };
 
+/** Chave de persistência dos tópicos recolhidos no localStorage. */
+const STORAGE_KEY = "direta:sidebar-topicos";
+
 export function Sidebar({
   role,
   onClose,
@@ -73,6 +78,41 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const items = NAV_ITEMS.filter((item) => item.roles.includes(role));
+
+  // Tópicos recolhidos: { captacao: true } = "Captação" está fechado
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [hydrated, setHydrated] = useState(false);
+
+  // Restaura o estado salvo no navegador
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (raw) setCollapsed(JSON.parse(raw) as Record<string, boolean>);
+    } catch {
+      /* localStorage indisponível */
+    }
+    setHydrated(true);
+  }, []);
+
+  // Persiste o estado
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(collapsed));
+    } catch {
+      /* localStorage indisponível */
+    }
+  }, [collapsed, hydrated]);
+
+  // Ao navegar, abre o tópico onde a página atual está
+  useEffect(() => {
+    const area = pathname.split("/")[1];
+    if (!area) return;
+    setCollapsed((prev) => (prev[area] ? { ...prev, [area]: false } : prev));
+  }, [pathname]);
+
+  const toggleArea = (area: string) =>
+    setCollapsed((prev) => ({ ...prev, [area]: !prev[area] }));
 
   const groupedItems = items.reduce<Record<string, NavItem[]>>((acc, item) => {
     const area = item.href.split("/")[1];
@@ -98,36 +138,66 @@ export function Sidebar({
       </div>
 
       {/* Nav */}
-      <nav className="scrollbar-hidden flex-1 space-y-4 overflow-y-auto overflow-x-hidden p-3">
-        {Object.entries(groupedItems).map(([area, areaItems]) => (
-          <div key={area}>
-            <div className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              {AREA_LABELS[area] || area}
+      <nav className="scrollbar-hidden flex-1 space-y-3 overflow-y-auto overflow-x-hidden p-3">
+        {Object.entries(groupedItems).map(([area, areaItems]) => {
+          const isOpen = !collapsed[area];
+
+          return (
+            <div key={area}>
+              {/* Cabeçalho do tópico (retrátil) */}
+              <button
+                type="button"
+                onClick={() => toggleArea(area)}
+                aria-expanded={isOpen}
+                aria-controls={`topico-${area}`}
+                className="mb-1 flex w-full items-center justify-between rounded px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 transition-colors hover:bg-slate-800/40 hover:text-slate-400"
+              >
+                <span className="truncate">{AREA_LABELS[area] || area}</span>
+                <ChevronDown
+                  className={cn(
+                    "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
+                    !isOpen && "-rotate-90"
+                  )}
+                />
+              </button>
+
+              {/* Itens do tópico */}
+              <div
+                id={`topico-${area}`}
+                className={cn(
+                  "grid transition-[grid-template-rows] duration-200 ease-out",
+                  isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                )}
+              >
+                <div className="overflow-hidden">
+                  <div className="space-y-1 pt-0.5">
+                    {areaItems.map((item) => {
+                      const Icon = item.icon;
+                      const isActive =
+                        pathname === item.href || pathname.startsWith(item.href + "/");
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={onClose}
+                          className={cn(
+                            "flex items-center gap-3 rounded-md px-3 py-1.5 text-sm transition-colors",
+                            isActive
+                              ? "bg-direta-orange/15 text-direta-orange font-medium border-l-2 border-direta-orange pl-[10px]"
+                              : "text-slate-300 hover:bg-slate-800/60 hover:text-white"
+                          )}
+                        >
+                          <Icon className="h-4 w-4 shrink-0" />
+                          <span className="truncate">{item.title}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="space-y-1">
-              {areaItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onClose}
-                    className={cn(
-                      "flex items-center gap-3 rounded-md px-3 py-1.5 text-sm transition-colors",
-                      isActive
-                        ? "bg-direta-orange/15 text-direta-orange font-medium border-l-2 border-direta-orange pl-[10px]"
-                        : "text-slate-300 hover:bg-slate-800/60 hover:text-white"
-                    )}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{item.title}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </nav>
 
       {/* Footer */}

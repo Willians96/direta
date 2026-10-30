@@ -10,11 +10,14 @@ interface LogoProps {
   href?: string;
 }
 
+// Proporções reais do asset public/logo-completa.png (283x95 -> ratio ~2.98).
+// Manter width/height coerentes com a classe de altura evita qualquer
+// letterbox (object-contain cortando as bordas do logo).
 const SIZE_MAP = {
-  sm: { width: 100, height: 36, className: "h-8" },
-  md: { width: 140, height: 48, className: "h-10" },
-  lg: { width: 180, height: 64, className: "h-12" },
-  xl: { width: 240, height: 86, className: "h-16" },
+  sm: { width: 95, height: 32, className: "h-8" },
+  md: { width: 119, height: 40, className: "h-10" },
+  lg: { width: 143, height: 48, className: "h-12" },
+  xl: { width: 191, height: 64, className: "h-16" },
 };
 
 export function Logo({
