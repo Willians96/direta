@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { UserPlus, Filter, Plus, ArrowUpDown, X } from "lucide-react";
+import { UserPlus, Filter, Plus, X } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -12,13 +12,25 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/shared/page-header";
-import { StatusBadge, PriorityBadge } from "@/components/shared/status-badge";
-import { SalesStatusBadge } from "@/components/shared/sales-status-badge";
-import { formatPhone, formatDate } from "@/lib/utils";
+import {
+  SalesStatusBadge,
+  SALES_STATUS_OPTIONS,
+} from "@/components/shared/sales-status-badge";
+import { formatPhone, formatDate, formatDateTime } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
-import { LeadStatus, LeadPriority } from "@prisma/client";
+import { auth } from "@/lib/auth";
+import { LeadStatus, LeadPriority, SalesStatus } from "@prisma/client";
+
+/**
+ * Sprint 21 — Tela de Captação de Leads conforme pedido da cliente.
+ *
+ * Faixa de indicadores (resumo do mês atual):
+ *   TOTAL | SEM CTT | NEGO | MATR | FECHA | INATIVO | MÉDIA | VISITA
+ *
+ * Tabela (na sequência pedida):
+ *   DT CAD | NOME | TELEFONE | CURSO | STATUS | VENDE | ATUALIZADO
+ */
 
 const STATUS_OPTIONS: { value: LeadStatus; label: string }[] = [
   { value: "NOVO", label: "Novo" },
@@ -42,66 +54,164 @@ const PRIORITY_OPTIONS: { value: LeadPriority; label: string }[] = [
   { value: "BAIXA", label: "Baixa" },
 ];
 
+const LIMITE_LISTA = 100;
+
+type KpiCardProps = {
+  label: string;
+  value: string | number;
+  href?: string;
+  color?: string;
+  /** Tooltip com a explicação pedida pela cliente. */
+  ajuda?: string;
+};
+
+function KpiCard({ label, value, href, color = "text-slate-700", ajuda }: KpiCardProps) {
+  const corpo = (
+    <>
+      <div className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+        {label}
+      </div>
+      <div className={`mt-1 break-words text-2xl font-bold ${color}`}>{value}</div>
+    </>
+  );
+
+  const classe = "rounded-md border bg-white p-3 text-center transition-colors";
+
+  if (!href) {
+    return (
+      <div className={classe} title={ajuda}>
+        {corpo}
+      </div>
+    );
+  }
+
+  return (
+    <Link href={href} className={`${classe} hover:border-direta-orange`} title={ajuda}>
+      {corpo}
+    </Link>
+  );
+}
+
+function formatarDecimal(valor: number, casas = 1) {
+  return valor.toFixed(casas).replace(".", ",");
+}
+
 export default async function LeadsPage({
   searchParams,
 }: {
   searchParams: Promise<{
     q?: string;
     status?: string;
+    salesStatus?: string;
     priority?: string;
     courseId?: string;
+    semFollowup?: string;
   }>;
 }) {
+  const session = await auth();
+  const role = (session?.user as any)?.role as string | undefined;
+  // Só o ADMIN entra em /vendas — a Captação não tem acesso à ficha do lead.
+  const podeAbrirFicha = role === "ADMIN";
+
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
   const statusFilter = params.status as LeadStatus | undefined;
+  const salesStatusFilter = params.salesStatus as SalesStatus | undefined;
   const priorityFilter = params.priority as LeadPriority | undefined;
   const courseFilter = params.courseId ?? "";
+  const semFollowup = params.semFollowup === "1";
 
-  const where: any = {};
-  if (q) {
-    where.OR = [
-      { fullName: { contains: q, mode: "insensitive" } },
-      { phone: { contains: q.replace(/\D/g, "") } },
-      { email: { contains: q, mode: "insensitive" } },
-    ];
-  }
+  // Busca por nome/telefone/e-mail (aplicada na faixa e na tabela)
+  const busca: any = q
+    ? {
+        OR: [
+          { fullName: { contains: q, mode: "insensitive" } },
+          { phone: { contains: q.replace(/\D/g, "") } },
+          { email: { contains: q, mode: "insensitive" } },
+        ],
+      }
+    : {};
+
+  // ---------- Faixa de indicadores: resumo do mês atual ----------
+  const agora = new Date();
+  const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1, 0, 0, 0, 0);
+  const fimMes = new Date(agora.getFullYear(), agora.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  const baseMes: any = {
+    createdAt: { gte: inicioMes, lte: fimMes },
+    ...busca,
+    ...(priorityFilter ? { priority: priorityFilter } : {}),
+    ...(courseFilter ? { courseId: courseFilter } : {}),
+  };
+
+  const [totalMes, semCtt, nego, matr, inativo, visita, followupsDoMes] =
+    await Promise.all([
+      prisma.lead.count({ where: baseMes }),
+      prisma.lead.count({ where: { ...baseMes, followups: { none: {} } } }),
+      prisma.lead.count({ where: { ...baseMes, salesStatus: "NEGOCIANDO" } }),
+      prisma.lead.count({ where: { ...baseMes, salesStatus: "MATRICULADO" } }),
+      prisma.lead.count({ where: { ...baseMes, status: "INATIVO" } }),
+      prisma.lead.count({ where: { ...baseMes, salesStatus: "VISITA" } }),
+      prisma.followup.count({ where: { lead: { is: baseMes } } }),
+    ]);
+
+  const fecha = totalMes > 0 ? (matr / totalMes) * 100 : 0;
+  const mediaFollowup = totalMes > 0 ? followupsDoMes / totalMes : 0;
+
+  // ---------- Tabela: todos os leads cadastrados ----------
+  const where: any = { ...busca };
   if (statusFilter) where.status = statusFilter;
+  if (salesStatusFilter) where.salesStatus = salesStatusFilter;
   if (priorityFilter) where.priority = priorityFilter;
   if (courseFilter) where.courseId = courseFilter;
+  if (semFollowup) where.followups = { none: {} };
 
-  const [leads, courses, totalPorStatus] = await Promise.all([
+  const [leads, courses] = await Promise.all([
     prisma.lead.findMany({
       where,
       include: {
         course: { select: { id: true, name: true } },
         assignedTo: { select: { id: true, name: true } },
-        createdBy: { select: { name: true } },
         campaign: { select: { name: true } },
       },
-      orderBy: [{ priority: "asc" }, { updatedAt: "desc" }],
-      take: 100,
+      orderBy: [{ updatedAt: "desc" }],
+      take: LIMITE_LISTA,
     }),
     prisma.course.findMany({
       where: { status: "ATIVO" },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
-    prisma.lead.groupBy({
-      by: ["status"],
-      _count: { _all: true },
-    }),
   ]);
 
-  const statusCount = (s: LeadStatus) =>
-    totalPorStatus.find((g) => g.status === s)?._count._all ?? 0;
+  const totalTabela = await prisma.lead.count({ where });
 
-  const totalAtivos = totalPorStatus
-    .filter((g) => !["APROVADA", "PERDIDA", "BLOQUEIOU", "CONCORRENTE", "FIN_SEM_RENDA", "INATIVO"].includes(g.status))
-    .reduce((acc, g) => acc + g._count._all, 0);
+  // Monta o link dos indicadores preservando os filtros de busca/prioridade/curso
+  const montarHref = (overrides: Record<string, string | null>) => {
+    const atual: Record<string, string> = {};
+    if (q) atual.q = q;
+    if (priorityFilter) atual.priority = priorityFilter;
+    if (courseFilter) atual.courseId = courseFilter;
 
-  // Construir query string limpa para "Limpar filtros"
-  const hasFilters = !!(q || statusFilter || priorityFilter || courseFilter);
+    const merged = { ...atual, ...overrides };
+    const sp = new URLSearchParams();
+    Object.entries(merged).forEach(([chave, valor]) => {
+      if (valor) sp.set(chave, valor);
+    });
+    const query = sp.toString();
+    return query ? `/captacao/leads?${query}` : "/captacao/leads";
+  };
+
+  const limparStatus = { status: null, salesStatus: null, semFollowup: null };
+
+  const hasFilters = !!(
+    q ||
+    statusFilter ||
+    salesStatusFilter ||
+    priorityFilter ||
+    courseFilter ||
+    semFollowup
+  );
 
   return (
     <div>
@@ -120,59 +230,72 @@ export default async function LeadsPage({
       />
 
       <div className="space-y-4 p-4 md:p-6">
-        {/* Mini KPIs por status */}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7">
-          <Link
-            href="/captacao/leads"
-            className="rounded-md border bg-white p-3 text-center transition-colors hover:border-direta-orange"
-          >
-            <div className="text-xs uppercase text-slate-500">Ativos</div>
-            <div className="text-xl font-bold text-slate-700">{totalAtivos}</div>
-          </Link>
-          <Link
-            href="/captacao/leads?status=NOVO"
-            className="rounded-md border bg-white p-3 text-center transition-colors hover:border-direta-orange"
-          >
-            <div className="text-xs uppercase text-slate-500">Novos</div>
-            <div className="text-xl font-bold text-sky-600">{statusCount("NOVO")}</div>
-          </Link>
-          <Link
-            href="/captacao/leads?status=EM_NEGOCIACAO"
-            className="rounded-md border bg-white p-3 text-center transition-colors hover:border-direta-orange"
-          >
-            <div className="text-xs uppercase text-slate-500">Negociação</div>
-            <div className="text-xl font-bold text-orange-600">{statusCount("EM_NEGOCIACAO")}</div>
-          </Link>
-          <Link
-            href="/captacao/leads?status=AGUARDANDO_ANALISE"
-            className="rounded-md border bg-white p-3 text-center transition-colors hover:border-direta-orange"
-          >
-            <div className="text-xs uppercase text-slate-500">Em análise</div>
-            <div className="text-xl font-bold text-indigo-600">{statusCount("AGUARDANDO_ANALISE")}</div>
-          </Link>
-          <Link
-            href="/captacao/leads?status=APROVADA"
-            className="rounded-md border bg-white p-3 text-center transition-colors hover:border-emerald-400"
-          >
-            <div className="text-xs uppercase text-slate-500">Aprovados</div>
-            <div className="text-xl font-bold text-emerald-600">{statusCount("APROVADA")}</div>
-          </Link>
-          <Link
-            href="/captacao/leads?priority=ALTA"
-            className="rounded-md border bg-white p-3 text-center transition-colors hover:border-red-400"
-          >
-            <div className="text-xs uppercase text-slate-500">🔥 Alta</div>
-            <div className="text-xl font-bold text-red-600">
-              {totalPorStatus.reduce((acc, g) => acc + (g.status === "APROVADA" ? 0 : g._count._all), 0)}
-            </div>
-          </Link>
-          <Link
-            href="/captacao/leads?status=PERDIDA"
-            className="rounded-md border bg-white p-3 text-center transition-colors hover:border-slate-400"
-          >
-            <div className="text-xs uppercase text-slate-500">Perdidos</div>
-            <div className="text-xl font-bold text-slate-600">{statusCount("PERDIDA") + statusCount("BLOQUEIOU") + statusCount("CONCORRENTE") + statusCount("FIN_SEM_RENDA") + statusCount("INATIVO")}</div>
-          </Link>
+        {/* Faixa de indicadores — resumo do mês atual */}
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Resumo do mês atual
+            </h2>
+            <span className="text-[11px] text-slate-400">
+              {formatarDecimal(agora.getMonth() + 1, 0)}/{agora.getFullYear()}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
+            <KpiCard
+              label="Total"
+              value={totalMes}
+              href={montarHref(limparStatus)}
+              ajuda="Clientes cadastrados no mês"
+            />
+            <KpiCard
+              label="Sem CTT"
+              value={semCtt}
+              color="text-amber-600"
+              href={montarHref({ ...limparStatus, semFollowup: "1" })}
+              ajuda="Ainda não lançou follow-up"
+            />
+            <KpiCard
+              label="Nego"
+              value={nego}
+              color="text-orange-600"
+              href={montarHref({ ...limparStatus, salesStatus: "NEGOCIANDO" })}
+              ajuda="Status de negociado"
+            />
+            <KpiCard
+              label="Matr"
+              value={matr}
+              color="text-emerald-600"
+              href={montarHref({ ...limparStatus, salesStatus: "MATRICULADO" })}
+              ajuda="Status de matriculado"
+            />
+            <KpiCard
+              label="Fecha"
+              value={`${formatarDecimal(fecha)}%`}
+              color="text-indigo-600"
+              href={montarHref({ ...limparStatus, salesStatus: "MATRICULADO" })}
+              ajuda="% de conversão: matrículas ÷ total do mês"
+            />
+            <KpiCard
+              label="Inativo"
+              value={inativo}
+              color="text-slate-600"
+              href={montarHref({ ...limparStatus, status: "INATIVO" })}
+              ajuda="Status inativo que o vendedor coloca"
+            />
+            <KpiCard
+              label="Média"
+              value={formatarDecimal(mediaFollowup)}
+              color="text-sky-600"
+              ajuda="Média de follow-ups por cliente do mês"
+            />
+            <KpiCard
+              label="Visita"
+              value={visita}
+              color="text-cyan-600"
+              href={montarHref({ ...limparStatus, salesStatus: "VISITA" })}
+              ajuda="Status de visita na escola"
+            />
+          </div>
         </div>
 
         {/* Filtros */}
@@ -189,13 +312,36 @@ export default async function LeadsPage({
                 name="status"
                 defaultValue={statusFilter ?? ""}
                 className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm sm:w-auto"
+                aria-label="Status do funil"
               >
-                <option value="">Todos os status</option>
+                <option value="">Status do funil: todos</option>
                 {STATUS_OPTIONS.map((s) => (
                   <option key={s.value} value={s.value}>
                     {s.label}
                   </option>
                 ))}
+              </select>
+              <select
+                name="salesStatus"
+                defaultValue={salesStatusFilter ?? ""}
+                className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm sm:w-auto"
+                aria-label="Status do cliente"
+              >
+                <option value="">Status do cliente: todos</option>
+                {SALES_STATUS_OPTIONS.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                name="semFollowup"
+                defaultValue={semFollowup ? "1" : ""}
+                className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm sm:w-auto"
+                aria-label="Contato"
+              >
+                <option value="">Todos os contatos</option>
+                <option value="1">Sem contato ainda (sem CTT)</option>
               </select>
               <select
                 name="priority"
@@ -237,14 +383,19 @@ export default async function LeadsPage({
           </CardContent>
         </Card>
 
-        {/* Tabela */}
+        {/* Tabela — sequência pedida pela cliente */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{leads.length} leads</CardTitle>
+            <CardTitle className="text-base">
+              {totalTabela} lead{totalTabela === 1 ? "" : "s"}
+            </CardTitle>
             <CardDescription>
               {hasFilters
-                ? "Resultado filtrado — ordenados por prioridade + atualização"
-                : "Ordenados por prioridade + atualização"}
+                ? "Resultado filtrado — ordenados por atualização"
+                : "Ordenados por atualização (último contato por cima)"}
+              {totalTabela > LIMITE_LISTA
+                ? ` — mostrando os ${LIMITE_LISTA} mais recentes`
+                : ""}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
@@ -256,53 +407,89 @@ export default async function LeadsPage({
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] text-sm">
+                <table className="w-full min-w-[900px] text-sm">
                   <thead>
                     <tr className="border-b bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
-                      <th className="px-3 py-3 md:px-6">Nome</th>
-                      <th className="px-3 py-3 md:px-6">Prioridade</th>
-                      <th className="px-3 py-3 md:px-6">Telefone</th>
-                      <th className="px-3 py-3 md:px-6">Fonte</th>
-                      <th className="px-3 py-3 md:px-6">Curso</th>
-                      <th className="px-3 py-3 md:px-6">Status do cliente</th>
-                      <th className="px-3 py-3 md:px-6">Vendedor</th>
-                      <th className="px-3 py-3 md:px-6">Atualizado</th>
-                      <th className="px-3 py-3 md:px-6"></th>
+                      <th className="px-3 py-3 md:px-4">DT CAD</th>
+                      <th className="px-3 py-3 md:px-4">Nome</th>
+                      <th className="px-3 py-3 md:px-4">Telefone</th>
+                      <th className="px-3 py-3 md:px-4">Curso</th>
+                      <th className="px-3 py-3 md:px-4">Status</th>
+                      <th className="px-3 py-3 md:px-4">Vende</th>
+                      <th className="px-3 py-3 md:px-4">Atualizado</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {leads.map((lead) => (
                       <tr key={lead.id} className="hover:bg-slate-50">
-                        <td className="px-3 py-3 md:px-6">
+                        {/* DT CAD */}
+                        <td className="whitespace-nowrap px-3 py-3 text-xs text-slate-500 md:px-4">
+                          {formatDate(lead.createdAt)}
+                        </td>
+
+                        {/* NOME */}
+                        <td className="px-3 py-3 md:px-4">
                           <div className="flex items-center gap-3">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 text-xs font-semibold text-white">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 text-xs font-semibold text-white">
                               {lead.fullName.split(" ").map((n) => n[0]).slice(0, 2).join("")}
                             </div>
-                            <div>
-                              <div className="font-medium text-slate-900">{lead.fullName}</div>
+                            <div className="min-w-0">
+                              {podeAbrirFicha ? (
+                                <Link
+                                  href={`/vendas/leads/${lead.id}`}
+                                  className="block truncate font-medium text-slate-900 hover:text-direta-orange hover:underline"
+                                >
+                                  {lead.fullName}
+                                </Link>
+                              ) : (
+                                <div className="truncate font-medium text-slate-900">
+                                  {lead.fullName}
+                                </div>
+                              )}
                               {lead.campaign && (
-                                <div className="text-[10px] text-slate-400">{lead.campaign.name}</div>
+                                <div className="truncate text-[10px] text-slate-400">
+                                  {lead.campaign.name}
+                                </div>
                               )}
                             </div>
                           </div>
                         </td>
-                        <td className="px-3 py-3 md:px-6">
-                          <PriorityBadge priority={lead.priority} />
+
+                        {/* TELEFONE */}
+                        <td className="whitespace-nowrap px-3 py-3 md:px-4">
+                          <a
+                            href={`tel:${lead.phone}`}
+                            className="text-slate-700 hover:text-direta-orange hover:underline"
+                          >
+                            {formatPhone(lead.phone)}
+                          </a>
+                          {lead.phone2 && (
+                            <div className="text-[10px] text-slate-400">
+                              {formatPhone(lead.phone2)}
+                            </div>
+                          )}
                         </td>
-                        <td className="px-3 py-3 md:px-6 text-slate-600">{formatPhone(lead.phone)}</td>
-                        <td className="px-3 py-3 md:px-6 text-xs text-slate-500">{lead.source ?? "—"}</td>
-                        <td className="px-3 py-3 md:px-6 text-slate-600">{lead.course?.name ?? "—"}</td>
-                        <td className="px-3 py-3 md:px-6">
+
+                        {/* CURSO */}
+                        <td className="px-3 py-3 text-slate-600 md:px-4">
+                          {lead.course?.name ?? "—"}
+                        </td>
+
+                        {/* STATUS */}
+                        <td className="px-3 py-3 md:px-4">
                           <SalesStatusBadge status={lead.salesStatus} />
                         </td>
-                        <td className="px-3 py-3 md:px-6 text-xs text-slate-500">
-                          {lead.assignedTo?.name ?? <span className="text-amber-600">Não atribuído</span>}
+
+                        {/* VENDE */}
+                        <td className="px-3 py-3 text-xs text-slate-500 md:px-4">
+                          {lead.assignedTo?.name ?? (
+                            <span className="text-amber-600">Não atribuído</span>
+                          )}
                         </td>
-                        <td className="px-3 py-3 md:px-6 text-slate-500">{formatDate(lead.updatedAt)}</td>
-                        <td className="px-3 py-3 md:px-6 text-right">
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/vendas/leads/${lead.id}`}>Abrir</Link>
-                          </Button>
+
+                        {/* ATUALIZADO */}
+                        <td className="whitespace-nowrap px-3 py-3 text-xs text-slate-500 md:px-4">
+                          {formatDateTime(lead.updatedAt)}
                         </td>
                       </tr>
                     ))}

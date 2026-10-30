@@ -1,8 +1,7 @@
 import { Clock, CheckCircle2 } from "lucide-react";
 import { FollowupType, FollowupOutcome, SalesStatus } from "@prisma/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { getSalesStatusLabel } from "@/components/shared/sales-status-badge";
+import { SalesStatusBadge } from "@/components/shared/sales-status-badge";
 
 /**
  * Histórico de Follow-ups no formato pedido pela cliente:
@@ -136,21 +135,7 @@ export function FollowupHistoryTable({ items }: { items: FollowupRow[] }) {
                       {/* STATUS */}
                       <td className="whitespace-nowrap px-3 py-3 md:px-4">
                         {f.salesStatus ? (
-                          <Badge
-                            variant={
-                              f.salesStatus === "MATRICULADO"
-                                ? "success"
-                                : f.salesStatus === "NEGOCIANDO"
-                                  ? "warning"
-                                  : f.salesStatus === "RETORNAR"
-                                    ? "info"
-                                    : f.salesStatus === "OPORTUNIDADE_VENDAS"
-                                      ? "default"
-                                      : "neutral"
-                            }
-                          >
-                            {getSalesStatusLabel(f.salesStatus)}
-                          </Badge>
+                          <SalesStatusBadge status={f.salesStatus} />
                         ) : (
                           <span className="text-xs text-slate-400">—</span>
                         )}

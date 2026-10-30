@@ -55,7 +55,23 @@ const FONTES = [
 
 const STATUS_CLIENTE = [
   "NEGOCIANDO", "MATRICULADO", "RETORNAR", "OPORTUNIDADE_VENDAS",
-  "FIN_SEM_RENDA", "OUTRA_UNIDADE",
+  "FIN_SEM_RENDA", "OUTRA_UNIDADE", "VISITA",
+];
+
+// Mantido para conferência: os status usados no ciclo determinístico abaixo
+// precisam existir no enum SalesStatus do banco.
+if (!STATUS_CLIENTE.includes("VISITA")) {
+  throw new Error("Enum SalesStatus sem o valor VISITA — rode a migration antes.");
+}
+
+/**
+ * Ciclo determinístico do "Status do cliente" dos leads que NÃO viraram
+ * matrícula — garante que a tela de Captação mostre todos os indicadores
+ * (NEGO, VISITA, RETORNAR...) com número, e não com zero.
+ */
+const CICLO_STATUS = [
+  "NEGOCIANDO", "VISITA", "NEGOCIANDO", "RETORNAR",
+  "NEGOCIANDO", "VISITA", "OPORTUNIDADE_VENDAS", "NEGOCIANDO",
 ];
 
 const PRIORIDADES = ["ALTA", "MEDIA", "BAIXA"];
@@ -121,12 +137,20 @@ async function criar() {
     if (usados.has(nome)) continue;
     usados.add(nome);
 
-    const diasAtras = 5 + Math.floor((i / NOMES.length) * (DIAS - 5));
+    // 10 leads caem no mês atual (base da faixa de indicadores da tela de
+    // Captação) e o restante se espalha pelos 90 dias anteriores.
+    const diasAtras =
+      i < 10 ? 2 + i * 2 : 30 + Math.floor(((i - 10) / (NOMES.length - 10)) * 60);
     const criadoEm = dataNoPeriodo(diasAtras);
     const vendedor = vendedores[i % vendedores.length];
     const curso = cursos[i % cursos.length];
     const campanha = campanhas.length ? campanhas[i % campanhas.length] : null;
     const matriculado = i % 3 === 0; // ~1/3 vira matrícula
+    // ~1/3 dos leads ainda NÃO recebeu nenhum follow-up (indicador "SEM CTT")
+    const semFollowup = !matriculado && i % 3 === 2;
+    const statusCliente = matriculado
+      ? "MATRICULADO"
+      : CICLO_STATUS[i % CICLO_STATUS.length];
 
     const lead = await p.lead.create({
       data: {
@@ -138,8 +162,8 @@ async function criar() {
           .replace(/[̀-ͯ]/g, "")
           .replace(/\s+/g, ".")}@email.com`,
         source: aleatorio(FONTES),
-        status: matriculado ? "APROVADA" : "EM_NEGOCIACAO",
-        salesStatus: matriculado ? "MATRICULADO" : aleatorio(STATUS_CLIENTE),
+        status: matriculado ? "APROVADA" : i % 6 === 4 ? "INATIVO" : "EM_NEGOCIACAO",
+        salesStatus: statusCliente,
         priority: aleatorio(PRIORIDADES),
         courseId: curso.id,
         campaignId: campanha?.id ?? null,
@@ -153,21 +177,31 @@ async function criar() {
     criadas++;
 
     // follow-ups do período
-    const qtdFollowups = 1 + (i % 3);
+    const qtdFollowups = semFollowup ? 0 : 2 + (i % 3);
+    let ultimoContato = criadoEm;
     for (let f = 0; f < qtdFollowups; f++) {
+      const ocorreuEm = dataNoPeriodo(Math.max(0, diasAtras - f - 1), 14);
+      if (ocorreuEm > ultimoContato) ultimoContato = ocorreuEm;
       await p.followup.create({
         data: {
           leadId: lead.id,
           userId: vendedor.id,
           type: aleatorio(["LIGACAO", "WHATSAPP", "EMAIL", "REUNIAO"]),
           outcome: "ATENDEU",
-          salesStatus: matriculado ? "MATRICULADO" : "NEGOCIANDO",
+          salesStatus: statusCliente,
           notes: `${TAG} acionamento de demonstracao`,
-          occurredAt: dataNoPeriodo(Math.max(0, diasAtras - f - 1), 14),
+          occurredAt: ocorreuEm,
           createdAt: criadoEm,
         },
       });
     }
+
+    // A coluna "ATUALIZADO" da tela de Leads reflete o último contato do
+    // vendedor (mesma regra do sistema: cada follow-up atualiza o lead).
+    await p.lead.update({
+      where: { id: lead.id },
+      data: { updatedAt: ultimoContato },
+    });
 
     // matrícula (~1/3 dos leads) com receita
     if (matriculado) {

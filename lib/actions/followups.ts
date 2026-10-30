@@ -81,13 +81,16 @@ export async function registerFollowupAction(raw: RegisterFollowupInput) {
     },
   });
 
-  // Se o vendedor classificou o cliente, atualiza o Status do Cliente do lead
-  if (parsed.salesStatus) {
-    await prisma.lead.update({
-      where: { id: lead.id },
-      data: { salesStatus: parsed.salesStatus },
-    });
-  }
+  // Atualiza o lead SEMPRE: o "Status do Cliente" quando o vendedor classificou
+  // e o carimbo de atualização (coluna ATUALIZADO da tela de Leads) a cada novo
+  // follow-up — mesmo quando o vendedor não mudou a classificação.
+  await prisma.lead.update({
+    where: { id: lead.id },
+    data: {
+      updatedAt: new Date(),
+      ...(parsed.salesStatus ? { salesStatus: parsed.salesStatus } : {}),
+    },
+  });
 
   await prisma.enrollmentAudit.create({
     data: {

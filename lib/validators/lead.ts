@@ -32,6 +32,7 @@ export const createLeadSchema = z.object({
       "ADM_RESOLVER",
       "DUPLICADO",
       "OPORTUNIDADE_VENDAS",
+      "VISITA",
     ])
     .default("NEGOCIANDO"),
   notes: z.string().max(2000).optional().or(z.literal("")),
@@ -76,6 +77,7 @@ export const updateSalesStatusSchema = z.object({
     "ADM_RESOLVER",
     "DUPLICADO",
     "OPORTUNIDADE_VENDAS",
+    "VISITA",
   ]),
 });
 

@@ -75,7 +75,7 @@ export default async function VendasAlertasPage() {
     id: string;
     fullName: string;
     status: string;
-    salesStatus: "NEGOCIANDO" | "MATRICULADO" | "RETORNAR" | "BLOQUEIOU" | "FECHOU_CONCORRENTE" | "FIN_SEM_RENDA" | "CIDADE_110KM" | "OUTRA_UNIDADE" | "ADM_RESOLVER" | "DUPLICADO" | "OPORTUNIDADE_VENDAS";
+    salesStatus: "NEGOCIANDO" | "MATRICULADO" | "RETORNAR" | "BLOQUEIOU" | "FECHOU_CONCORRENTE" | "FIN_SEM_RENDA" | "CIDADE_110KM" | "OUTRA_UNIDADE" | "ADM_RESOLVER" | "DUPLICADO" | "OPORTUNIDADE_VENDAS" | "VISITA";
     priority: "ALTA" | "MEDIA" | "BAIXA";
     courseName: string | null;
     createdAt: Date;

@@ -327,6 +327,7 @@ enum SalesStatus {
   ADM_RESOLVER
   DUPLICADO
   OPORTUNIDADE_VENDAS
+  VISITA
 }
 
 model Lead {

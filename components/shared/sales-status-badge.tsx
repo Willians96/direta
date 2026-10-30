@@ -20,6 +20,7 @@ const SALES_STATUS_CONFIG: Record<
   ADM_RESOLVER: { label: "ADM resolver", variant: "secondary" },
   DUPLICADO: { label: "Duplicado", variant: "neutral" },
   OPORTUNIDADE_VENDAS: { label: "Oportunidade vendas", variant: "default" },
+  VISITA: { label: "Visita na escola", variant: "info" },
 };
 
 export const SALES_STATUS_OPTIONS = (

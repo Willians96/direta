@@ -33,6 +33,7 @@ const SALES_STATUS_OPTIONS = [
   "ADM_RESOLVER",
   "DUPLICADO",
   "OPORTUNIDADE_VENDAS",
+  "VISITA",
 ] as SalesStatus[];
 
 export default async function VendasLeadsPage({
