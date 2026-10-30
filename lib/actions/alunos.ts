@@ -145,7 +145,7 @@ export async function createStudentAction(raw: AlunoInput) {
   await prisma.enrollmentAudit.create({
     data: {
       leadId: lead.id,
-      action: "PRE_ENROLLMENT_APPROVED",
+      action: "ENROLLMENT_CREATED",
       actorId: actor.id,
       targetType: "Enrollment",
       targetId: enrollment.id,
@@ -245,7 +245,7 @@ export async function updateStudentAction(enrollmentId: string, raw: AlunoInput)
   await prisma.enrollmentAudit.create({
     data: {
       leadId: enrollment.leadId,
-      action: "PRE_ENROLLMENT_APPROVED",
+      action: "ENROLLMENT_UPDATED",
       actorId: actor.id,
       targetType: "Enrollment",
       targetId: enrollmentId,
@@ -312,7 +312,7 @@ export async function updateStudentStatusAction(
   await prisma.enrollmentAudit.create({
     data: {
       leadId: enrollment.leadId,
-      action: "PRE_ENROLLMENT_APPROVED",
+      action: "ENROLLMENT_STATUS_CHANGED",
       actorId: actor.id,
       targetType: "Enrollment",
       targetId: enrollmentId,

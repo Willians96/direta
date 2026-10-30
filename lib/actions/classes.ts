@@ -231,7 +231,7 @@ export async function enrollStudentAction(
 
     await prisma.enrollmentAudit.create({
       data: {
-        action: "PRE_ENROLLMENT_APPROVED", // reuse (matrícula efetivada)
+        action: "ENROLLMENT_STATUS_CHANGED", // aluno alocado na turma
         actorId: adminId,
         targetType: "ClassStudent",
         targetId: enrollment.id,

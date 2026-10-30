@@ -634,6 +634,10 @@ enum AuditAction {
   COURSE_CREATED
   COURSE_UPDATED
   COURSE_STATUS_CHANGED
+  // --- Sprint 20 — módulo de cadastro de alunos ---
+  ENROLLMENT_CREATED
+  ENROLLMENT_UPDATED
+  ENROLLMENT_STATUS_CHANGED
 }
 
 model EnrollmentAudit {
