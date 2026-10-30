@@ -107,7 +107,7 @@ export default async function VendasLeadsPage({
       />
 
       <div className="space-y-4 p-4 md:p-6">
-        {/* Mini KPIs por status de venda */}
+        {/* Mini KPIs por Status do cliente */}
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
           <Link
             href="/vendas/leads"
@@ -174,7 +174,7 @@ export default async function VendasLeadsPage({
                 defaultValue={salesStatusFilter ?? ""}
                 className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm sm:w-auto"
               >
-                <option value="">Todos os status de venda</option>
+                <option value="">Todos os Status do cliente</option>
                 {SALES_STATUS_OPTIONS.map((s) => (
                   <option key={s} value={s}>
                     {s.replace(/_/g, " ")}
@@ -212,7 +212,7 @@ export default async function VendasLeadsPage({
           <CardHeader>
             <CardTitle className="text-base">{leads.length} leads</CardTitle>
             <CardDescription>
-              Status de venda é a classificação feita por você
+              Status do cliente é a classificação feita por você
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
@@ -228,7 +228,7 @@ export default async function VendasLeadsPage({
                   <thead>
                     <tr className="border-b bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
                       <th className="px-3 py-3 md:px-6">Nome</th>
-                      <th className="px-3 py-3 md:px-6">Status de venda</th>
+                      <th className="px-3 py-3 md:px-6">Status do cliente</th>
                       <th className="px-3 py-3 md:px-6">Prioridade</th>
                       <th className="px-3 py-3 md:px-6">Telefones</th>
                       <th className="px-3 py-3 md:px-6">Curso</th>

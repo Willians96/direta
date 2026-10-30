@@ -192,7 +192,7 @@ export default async function NovoLeadPage() {
               </div>
 
               <div>
-                <Label htmlFor="salesStatus">Status de venda</Label>
+                <Label htmlFor="salesStatus">Status do cliente</Label>
                 <select
                   id="salesStatus"
                   name="salesStatus"

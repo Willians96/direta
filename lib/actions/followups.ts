@@ -28,14 +28,17 @@ const ACTIVE_STATUSES: LeadStatus[] = [
 const registerSchema = z.object({
   leadId: z.string().min(1),
   type: z.nativeEnum(FollowupType),
-  outcome: z.nativeEnum(FollowupOutcome),
-  salesStatus: z.nativeEnum(SalesStatus).optional(), // status que o vendedor colocou na venda
+  // O resultado do contato não é mais escolhido no formulário: o registro
+  // grava "Atendeu" e o vendedor classifica o cliente em "Status do cliente".
+  outcome: z.nativeEnum(FollowupOutcome).optional().default("ATENDEU"),
+  salesStatus: z.nativeEnum(SalesStatus).optional(), // status do cliente
   notes: z.string().max(2000).optional(),
   nextAction: z.string().optional(), // ISO datetime — vazio = sem próximo
   occurredAt: z.string().optional(), // ISO datetime — default now
 });
 
-export type RegisterFollowupInput = z.infer<typeof registerSchema>;
+// z.input: outcome tem default, então é opcional na entrada (gravado como ATENDEU)
+export type RegisterFollowupInput = z.input<typeof registerSchema>;
 
 async function requireActor() {
   const session = await auth();
@@ -78,7 +81,7 @@ export async function registerFollowupAction(raw: RegisterFollowupInput) {
     },
   });
 
-  // Se o vendedor classificou o lead, atualiza o Status de Venda do lead
+  // Se o vendedor classificou o cliente, atualiza o Status do Cliente do lead
   if (parsed.salesStatus) {
     await prisma.lead.update({
       where: { id: lead.id },
@@ -94,7 +97,7 @@ export async function registerFollowupAction(raw: RegisterFollowupInput) {
       targetType: "Followup",
       targetId: followup.id,
       details: `Follow-up ${parsed.type} (${parsed.outcome})${
-        parsed.salesStatus ? ` — status de venda: ${parsed.salesStatus}` : ""
+        parsed.salesStatus ? ` — status do cliente: ${parsed.salesStatus}` : ""
       }${nextAction ? ` — próximo: ${nextAction.toISOString().slice(0, 10)}` : ""}`,
     },
   });

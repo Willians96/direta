@@ -309,11 +309,11 @@ enum LeadPriority {
 }
 
 // ============================================
-// STATUS DE VENDA (classificação do vendedor)
+// status do cliente (classificação do vendedor)
 // ============================================
 // Campo SEPARADO do status de fluxo (LeadStatus). O vendedor classifica
 // cada cliente com estes status; onde antes aparecia "DEVOLVIDA" na listagem,
-// passa a aparecer o status de venda que o vendedor preencheu.
+// passa a aparecer o status do cliente que o vendedor preencheu.
 
 enum SalesStatus {
   NEGOCIANDO
@@ -579,7 +579,7 @@ model Document {
 // ============================================
 // Preenchidos pelo vendedor no botão "Realizar Matrícula".
 // Ao salvar: cria o registro, marca o lead como MATRICULADO
-// (Status de Venda) e APROVADO (status de fluxo).
+// (status do cliente) e APROVADO (status de fluxo).
 
 model Enrollment {
   id                String         @id @default(cuid())

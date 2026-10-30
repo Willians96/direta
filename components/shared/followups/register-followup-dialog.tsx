@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Phone, MessageSquare, Mail, Calendar, User, MapPin, MoreHorizontal } from "lucide-react";
-import { FollowupType, FollowupOutcome, SalesStatus } from "@prisma/client";
+import { FollowupType, SalesStatus } from "@prisma/client";
 import { SALES_STATUS_OPTIONS } from "@/components/shared/sales-status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,6 @@ import { registerFollowupAction } from "@/lib/actions/followups";
 
 const schema = z.object({
   type: z.nativeEnum(FollowupType),
-  outcome: z.nativeEnum(FollowupOutcome),
   salesStatus: z.nativeEnum(SalesStatus).optional(),
   notes: z.string().max(2000).optional(),
   occurredAt: z.string().optional(),
@@ -40,15 +39,6 @@ const TYPE_OPTIONS: { value: FollowupType; label: string; icon: React.ComponentT
   { value: "REUNIAO", label: "Reunião", icon: Calendar },
   { value: "VISITA", label: "Visita", icon: MapPin },
   { value: "OUTRO", label: "Outro", icon: MoreHorizontal },
-];
-
-const OUTCOME_OPTIONS: { value: FollowupOutcome; label: string; color: string }[] = [
-  { value: "ATENDEU", label: "Atendeu", color: "bg-emerald-100 text-emerald-700 border-emerald-300" },
-  { value: "REAGENDOU", label: "Reagendou", color: "bg-blue-100 text-blue-700 border-blue-300" },
-  { value: "RECADO", label: "Recado", color: "bg-amber-100 text-amber-700 border-amber-300" },
-  { value: "NAO_ATENDEU", label: "Não atendeu", color: "bg-slate-100 text-slate-700 border-slate-300" },
-  { value: "SEM_RESPOSTA", label: "Sem resposta", color: "bg-slate-100 text-slate-700 border-slate-300" },
-  { value: "DESISTIU", label: "Desistiu", color: "bg-red-100 text-red-700 border-red-300" },
 ];
 
 export function RegisterFollowupDialog({
@@ -75,7 +65,6 @@ export function RegisterFollowupDialog({
     resolver: zodResolver(schema),
     defaultValues: {
       type: "LIGACAO",
-      outcome: "ATENDEU",
       salesStatus: undefined,
       notes: "",
       occurredAt: nowIso,
@@ -90,7 +79,6 @@ export function RegisterFollowupDialog({
         await registerFollowupAction({
           leadId,
           type: data.type,
-          outcome: data.outcome,
           salesStatus: data.salesStatus,
           notes: data.notes || undefined,
           occurredAt: data.occurredAt ? new Date(data.occurredAt).toISOString() : undefined,
@@ -147,33 +135,9 @@ export function RegisterFollowupDialog({
             </div>
           </div>
 
-          {/* Outcome */}
+          {/* Status do cliente — classificação do vendedor */}
           <div>
-            <Label>Resultado</Label>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {OUTCOME_OPTIONS.map((opt) => {
-                const selected = form.watch("outcome") === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => form.setValue("outcome", opt.value)}
-                    className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                      selected ? opt.color + " ring-2 ring-offset-1 ring-direta-orange" : "border-slate-200 text-slate-600 hover:border-slate-300"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Status de Venda (classificação do vendedor) */}
-          <div>
-            <Label htmlFor="salesStatus">
-              Status de venda (classificação do cliente)
-            </Label>
+            <Label htmlFor="salesStatus">Status do cliente</Label>
             <select
               id="salesStatus"
               {...form.register("salesStatus")}
@@ -194,7 +158,7 @@ export function RegisterFollowupDialog({
           {/* Data/hora do contato */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="occurredAt">Quando aconteceu</Label>
+              <Label htmlFor="occurredAt">Data contato</Label>
               <Input
                 id="occurredAt"
                 type="datetime-local"

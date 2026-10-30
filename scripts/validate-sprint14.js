@@ -39,7 +39,7 @@ async function get(jar, url) {
   const lead = await get(vendas, `${BASE}/vendas/leads/${LEAD_ID}`);
   console.log(`/vendas/leads/[id] -> ${lead.status} (${lead.html.length}b)`);
   [
-    ["Status de Venda (badge)", "Status de venda"],
+    ["Status do cliente (badge)", "Status do cliente"],
     ["Botão Enviar Email", "Enviar Email"],
     ["Botão Realizar Matrícula", "Realizar Matrícula"],
     ["Histórico em tabela", "DT CTT"],
@@ -66,7 +66,7 @@ async function get(jar, url) {
   // Lista de leads do vendedor
   const list = await get(vendas, `${BASE}/vendas/leads`);
   console.log(`/vendas/leads -> ${list.status} (${list.html.length}b)`);
-  ["Status de venda", "Prioridade", "Carlos Silva", "Fonte"].forEach((m) =>
+  ["Status do cliente", "Prioridade", "Carlos Silva", "Fonte"].forEach((m) =>
     console.log(`  ${list.html.includes(m) ? "OK  " : "MISS"} ${m}`),
   );
 
@@ -80,13 +80,13 @@ async function get(jar, url) {
     "3º telefone",
     "Fonte (como conheceu a escola)",
     "Instagram",
-    "Status de venda",
+    "Status do cliente",
     "Vendedor responsável",
   ].forEach((m) => console.log(`  ${novo.html.includes(m) ? "OK  " : "MISS"} ${m}`));
 
   const capLeads = await get(cap, `${BASE}/captacao/leads`);
   console.log(`/captacao/leads -> ${capLeads.status}`);
-  ["Status de venda", "Fonte"].forEach((m) =>
+  ["Status do cliente", "Fonte"].forEach((m) =>
     console.log(`  ${capLeads.html.includes(m) ? "OK  " : "MISS"} ${m}`),
   );
 

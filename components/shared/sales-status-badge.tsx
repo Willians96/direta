@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import type { SalesStatus } from "@prisma/client";
 
 /**
- * Status de Venda — classificação que o VENDEDOR faz do cliente.
+ * status do cliente — classificação que o VENDEDOR faz do cliente.
  * Substitui visualmente o "DEVOLVIDA" nas listagens.
  */
 const SALES_STATUS_CONFIG: Record<
@@ -13,7 +13,7 @@ const SALES_STATUS_CONFIG: Record<
   MATRICULADO: { label: "Matriculado", variant: "success" },
   RETORNAR: { label: "Retornar", variant: "info" },
   BLOQUEIOU: { label: "Bloqueou", variant: "danger" },
-  FECHOU_CONCORRENTE: { label: "Fechou c/ concorrente", variant: "danger" },
+  FECHOU_CONCORRENTE: { label: "Fechou c/ conco", variant: "danger" },
   FIN_SEM_RENDA: { label: "Financeiro s/ renda", variant: "neutral" },
   CIDADE_110KM: { label: "Cidade 110 km", variant: "neutral" },
   OUTRA_UNIDADE: { label: "Outra unidade", variant: "neutral" },

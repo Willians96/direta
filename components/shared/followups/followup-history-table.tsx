@@ -64,7 +64,7 @@ export function FollowupHistoryTable({ items }: { items: FollowupRow[] }) {
       <CardHeader>
         <CardTitle className="text-base">Histórico de Follow-ups</CardTitle>
         <CardDescription>
-          Data do contato · horário · conversa com o cliente · status de venda
+          Data do contato · horário · conversa com o cliente · status do cliente
         </CardDescription>
       </CardHeader>
       <CardContent className="p-0">

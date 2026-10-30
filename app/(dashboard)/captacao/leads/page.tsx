@@ -264,7 +264,7 @@ export default async function LeadsPage({
                       <th className="px-3 py-3 md:px-6">Telefone</th>
                       <th className="px-3 py-3 md:px-6">Fonte</th>
                       <th className="px-3 py-3 md:px-6">Curso</th>
-                      <th className="px-3 py-3 md:px-6">Status de venda</th>
+                      <th className="px-3 py-3 md:px-6">Status do cliente</th>
                       <th className="px-3 py-3 md:px-6">Vendedor</th>
                       <th className="px-3 py-3 md:px-6">Atualizado</th>
                       <th className="px-3 py-3 md:px-6"></th>

@@ -63,7 +63,7 @@ export async function createLeadAction(raw: CreateLeadInput) {
       actorId: actor.id,
       targetType: "Lead",
       targetId: lead.id,
-      details: `Lead criado — fonte: ${data.source || "não informada"}; status de venda: ${data.salesStatus}`,
+      details: `Lead criado — fonte: ${data.source || "não informada"}; Status do cliente: ${data.salesStatus}`,
     },
   });
 
@@ -75,7 +75,7 @@ export async function createLeadAction(raw: CreateLeadInput) {
   return { ok: true, id: lead.id };
 }
 
-/** Atualiza o "Status de Venda" (classificação do vendedor). */
+/** Atualiza o "Status do cliente" (classificação do vendedor). */
 export async function updateSalesStatusAction(raw: {
   leadId: string;
   salesStatus: string;
@@ -104,7 +104,7 @@ export async function updateSalesStatusAction(raw: {
       actorId: actor.id,
       targetType: "Lead",
       targetId: data.leadId,
-      details: `Status de venda alterado para ${data.salesStatus}`,
+      details: `Status do cliente alterado para ${data.salesStatus}`,
     },
   });
 

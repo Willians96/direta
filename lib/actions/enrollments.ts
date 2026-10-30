@@ -9,7 +9,7 @@ import { PaymentMethod, SalesStatus } from "@prisma/client";
 /**
  * Sprint 14 — "Realizar Matrícula".
  * Ao salvar: cria o registro Enrollment, marca o lead como MATRICULADO
- * (Status de Venda) e APROVADO (status de fluxo).
+ * (status do cliente) e APROVADO (status de fluxo).
  */
 
 const enrollmentSchema = z.object({
@@ -97,7 +97,7 @@ export async function createEnrollmentAction(raw: EnrollmentInput) {
     },
   });
 
-  // Lead: status de venda = MATRICULADO, status de fluxo = APROVADA
+  // Lead: status do cliente = MATRICULADO, status de fluxo = APROVADA
   await prisma.lead.update({
     where: { id: data.leadId },
     data: {

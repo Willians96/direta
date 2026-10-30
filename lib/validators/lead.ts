@@ -4,7 +4,7 @@ import { z } from "zod";
  * Validadores de Lead — Sprint 14 (ajustes da cliente).
  * - 3 telefones de contato
  * - "Fonte" (como o cliente conheceu a escola)
- * - Status de Venda (classificação do vendedor)
+ * - status do cliente (classificação do vendedor)
  */
 
 export const createLeadSchema = z.object({

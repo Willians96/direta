@@ -129,7 +129,7 @@ export default async function LeadDetailPage({
                 <div className="flex flex-col items-end gap-1">
                   <SalesStatusBadge status={lead.salesStatus} />
                   <span className="text-[10px] text-slate-400">
-                    Status de venda (vendedor)
+                    Status do cliente (vendedor)
                   </span>
                 </div>
               </div>
