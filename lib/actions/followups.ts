@@ -256,7 +256,7 @@ export async function getUpcomingFollowups(withinDays = 7, scope: "all" | "mine"
       ...(scope === "mine" ? { lead: { assignedToId: actor.id } } : {}),
     },
     include: {
-      lead: { select: { id: true, fullName: true, status: true } },
+      lead: { select: { id: true, fullName: true, status: true, salesStatus: true } },
       user: { select: { id: true, name: true } },
     },
     orderBy: { nextAction: "asc" },

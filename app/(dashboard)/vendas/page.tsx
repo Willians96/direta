@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatCard } from "@/components/shared/stat-card";
 import { PageHeader } from "@/components/shared/page-header";
-import { StatusBadge, PriorityBadge } from "@/components/shared/status-badge";
+import { PriorityBadge } from "@/components/shared/status-badge";
 import { SalesStatusBadge } from "@/components/shared/sales-status-badge";
 import { AlertsCard } from "@/components/shared/followups/alerts-card";
 import { RegisterFollowupDialog } from "@/components/shared/followups/register-followup-dialog";

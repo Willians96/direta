@@ -23,7 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/shared/page-header";
-import { StatusBadge, PriorityBadge } from "@/components/shared/status-badge";
+import { PriorityBadge } from "@/components/shared/status-badge";
 import { SalesStatusBadge } from "@/components/shared/sales-status-badge";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -317,7 +317,7 @@ export default async function VendasAlertasPage() {
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-slate-900">{f.lead.fullName}</span>
-                            <StatusBadge status={f.lead.status} />
+                            <SalesStatusBadge status={f.lead.salesStatus} />
                             {isOverdue && <Badge variant="destructive">ATRASADO</Badge>}
                           </div>
                           <div className="text-xs text-slate-500">

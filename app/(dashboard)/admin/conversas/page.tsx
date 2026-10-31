@@ -21,7 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/shared/page-header";
-import { StatusBadge } from "@/components/shared/status-badge";
+import { SalesStatusBadge } from "@/components/shared/sales-status-badge";
 import { auth } from "@/lib/auth";
 import { getRecentConversations } from "@/lib/actions/messages";
 import { formatDateTime } from "@/lib/utils";
@@ -154,7 +154,7 @@ export default async function ConversasPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-slate-900">{c.fullName}</span>
-                          <StatusBadge status={c.status} />
+                          <SalesStatusBadge status={c.salesStatus} />
                           <Badge variant="neutral">
                             {c.totalMessages} msg
                           </Badge>

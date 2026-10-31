@@ -51,6 +51,11 @@ const p = new PrismaClient();
       p.lead.count(),
     ]);
 
+  // Média de follow-ups: no mês (como está na tela) e no sistema inteiro
+  // (leitura literal do pedido: "somar todos os follow-up para o sistema").
+  const followupsSistema = await p.followup.count();
+  const mediaSistema = totalGeral > 0 ? followupsSistema / totalGeral : 0;
+
   const fecha = total > 0 ? (matr / total) * 100 : 0;
   const media = total > 0 ? followups / total : 0;
 
@@ -65,6 +70,12 @@ const p = new PrismaClient();
   console.log(`VISITA     ${visita}`);
   console.log(`\nLeads na tabela (todos): ${totalGeral}`);
   console.log(`Follow-ups do mês: ${followups}`);
+  console.log(`Follow-ups no sistema inteiro: ${followupsSistema}`);
+  console.log(
+    `MÉDIA no sistema inteiro (leitura literal do pedido): ${mediaSistema
+      .toFixed(1)
+      .replace(".", ",")}`
+  );
 
   const visitaTotal = await p.lead.count({ where: { salesStatus: "VISITA" } });
   console.log(`Leads com status VISITA no total: ${visitaTotal}`);

@@ -140,6 +140,7 @@ export async function getRecentConversations(limit = 50) {
       fullName: l.fullName,
       phone: l.phone,
       status: l.status,
+      salesStatus: l.salesStatus,
       assignedTo: l.assignedTo,
       courseName: l.course?.name ?? null,
       totalMessages: l._count.messages,
