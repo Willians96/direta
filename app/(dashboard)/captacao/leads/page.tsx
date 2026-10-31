@@ -156,7 +156,10 @@ export default async function LeadsPage({
       prisma.followup.count({ where: { lead: { is: baseMes } } }),
     ]);
 
-  const fecha = totalMes > 0 ? (matr / totalMes) * 100 : 0;
+  // FECHA %: leitura literal do pedido da cliente — "somar o total de
+  // clientes que entrou no mês, dividir pelas matrículas fechadas".
+  // Sem matrículas fechadas no mês não há divisão → mostra "—".
+  const fecha = matr > 0 ? (totalMes / matr) * 100 : null;
   const mediaFollowup = totalMes > 0 ? followupsDoMes / totalMes : 0;
 
   // ---------- Tabela: todos os leads cadastrados ----------
@@ -276,10 +279,10 @@ export default async function LeadsPage({
             />
             <KpiCard
               label="Fecha"
-              value={`${formatarDecimal(fecha)}%`}
+              value={fecha === null ? "—" : `${formatarDecimal(fecha)}%`}
               color="text-indigo-600"
               href={montarHref({ ...limparStatus, salesStatus: "MATRICULADO" })}
-              ajuda="% de conversão: matrículas ÷ total do mês"
+              ajuda="Total de clientes do mês ÷ matrículas fechadas"
             />
             <KpiCard
               label="Inativo"

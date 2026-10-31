@@ -56,7 +56,8 @@ const p = new PrismaClient();
   const followupsSistema = await p.followup.count();
   const mediaSistema = totalGeral > 0 ? followupsSistema / totalGeral : 0;
 
-  const fecha = total > 0 ? (matr / total) * 100 : 0;
+  // FECHA %: total de clientes do mês ÷ matrículas fechadas (pedido da cliente)
+  const fecha = matr > 0 ? (total / matr) * 100 : null;
   const media = total > 0 ? followups / total : 0;
 
   console.log(`\n=== Faixa de indicadores — ${agora.getMonth() + 1}/${agora.getFullYear()} ===`);
@@ -64,7 +65,7 @@ const p = new PrismaClient();
   console.log(`SEM CTT    ${semCtt}`);
   console.log(`NEGO       ${nego}`);
   console.log(`MATR       ${matr}`);
-  console.log(`FECHA      ${fecha.toFixed(1).replace(".", ",")}%`);
+  console.log(`FECHA      ${fecha === null ? "—" : fecha.toFixed(1).replace(".", ",") + "%"}`);
   console.log(`INATIVO    ${inativo}`);
   console.log(`MEDIA      ${media.toFixed(1).replace(".", ",")}`);
   console.log(`VISITA     ${visita}`);
