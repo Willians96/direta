@@ -173,7 +173,7 @@ export default async function FilaWhatsAppPage({
             <span className="font-medium">Análise por IA desligada.</span> As mensagens estão
             sendo qualificadas só por regras. Para ativar a IA, cadastre a chave{" "}
             <code className="rounded bg-white px-1">LLM_API_KEY</code> nas variáveis de ambiente
-            da Vercel.
+            do servidor e publique uma nova versão.
           </div>
         )}
 

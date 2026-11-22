@@ -1,8 +1,8 @@
 # 🚀 GESCOLA na VPS — Runbook de operação
 
 > **Estado atual (nov/2026):** o sistema roda **na VPS `76.13.123.172`** (Ubuntu 24.04 LTS), em
-> containers Docker, atrás do **Traefik** que já serve o FarmaVet. A URL pública depende do
-> subdomínio configurado em `GESCOLA_DOMAIN`.
+> containers Docker, atrás do **Traefik** que já serve o FarmaVet.
+> **URL pública:** https://app.scioti.tech (certificado Let's Encrypt válido até 20/02/2027).
 >
 > A Vercel (`direta-ten.vercel.app`) continua no ar como **rede de segurança**, mas aponta para o
 > Neon — a fonte de verdade do dia a dia é o PostgreSQL da VPS.
@@ -82,27 +82,28 @@ docker exec gescola-app curl -fsS http://localhost:3000/api/health
 
 ---
 
-## 4. Domínio e SSL
+## 4. Domínio e SSL — já configurado ✅
 
 O Traefik já tem o resolver **Let's Encrypt** configurado (`letsencrypt`, ACME HTTP challenge).
-Para o gescola:
+O gescola está em **`app.scioti.tech`**, cujo registro A já aponta para `76.13.123.172`.
 
-1. **DNS**: crie o registro **A** do subdomínio apontando para `76.13.123.172`
-   (ex.: `gescola.seudominio.com.br → 76.13.123.172`)
+Para trocar o domínio:
+
+1. **DNS**: crie o registro **A** do novo subdomínio apontando para `76.13.123.172`
 2. **VPS**: ajuste o domínio no arquivo de ambiente e recrie o container
 
    ```bash
    cd /opt/gescola/app
-   sed -i 's#^GESCOLA_DOMAIN=.*#GESCOLA_DOMAIN="gescola.seudominio.com.br"#' .env.vps
+   sed -i 's#^GESCOLA_DOMAIN=.*#GESCOLA_DOMAIN="novo.seudominio.com.br"#' .env.vps
    docker compose -f docker-compose.vps.yml --env-file .env.vps up -d --force-recreate app
    ```
 
-3. O Traefik pede o certificado sozinho (o router novo usa `certresolver=letsencrypt`) e
-   renova antes de expirar
+3. O Traefik pede o certificado sozinho (o router usa `certresolver=letsencrypt`) e renova antes
+   de expirar
 4. Confira: `docker logs farmavet-traefik --tail 20 | grep -i gescola`
 
 > Enquanto o DNS não aponta, o app responde **apenas internamente**. Para testar sem domínio:
-> `curl -sk -H "Host: gescola.pendente.local" https://127.0.0.1/login` (na própria VPS).
+> `curl -sk -H "Host: app.scioti.tech" https://127.0.0.1/login` (na própria VPS).
 
 ---
 
@@ -111,7 +112,7 @@ Para o gescola:
 O webhook fica em:
 
 ```
-https://<seu-subdominio>/api/whatsapp/webhook
+https://app.scioti.tech/api/whatsapp/webhook
 ```
 
 | Item | Onde |
@@ -199,11 +200,12 @@ docker exec gescola-postgres psql -U gescola_app -d gescola -c '\dt'
 - [x] Código na VPS (container, Traefik, PostgreSQL dedicado)
 - [x] Dados migrados do Neon com conferência de contagem
 - [x] Backup diário instalado e testado
-- [ ] Subdomínio apontando para `76.13.123.172` (DNS)
-- [ ] `GESCOLA_DOMAIN` ajustado + certificado emitido
+- [x] Subdomínio `app.scioti.tech` apontando para `76.13.123.172` (DNS já existia)
+- [x] `GESCOLA_DOMAIN` ajustado + certificado Let's Encrypt emitido
 - [ ] `WHATSAPP_APP_SECRET` cadastrado (destrava o webhook real da Meta)
 - [ ] `LLM_API_KEY` cadastrado (liga a análise por IA)
-- [ ] `AUTH_URL`/URL pública propagada para a Vercel (ou Vercel desligada)
+- [ ] `WHATSAPP_TOKEN` + `WHATSAPP_PHONE_NUMBER_ID` (Fase 3 — envio de mensagens)
+- [ ] URL da Vercel propagada para a URL nova (ou Vercel desligada)
 - [ ] Upload de documento testado no volume `/opt/gescola/storage`
 - [ ] Backup copiado para fora da VPS
 - [ ] Senha do Neon rotacionada (o dump antigo ficou em disco)
