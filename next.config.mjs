@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Build "standalone": a imagem Docker da VPS carrega só o necessário
+  // (server.js + traced node_modules), em vez do node_modules inteiro.
+  output: "standalone",
   // O lint roda no CI (passo dedicado) — manter o build livre de lint
   // evita que um aviso de lint derrube o deploy da Vercel.
   eslint: {

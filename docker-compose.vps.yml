@@ -1,0 +1,123 @@
+# ============================================
+# GESCOLA — stack de produção na VPS (Docker + Traefik)
+#
+# Esta VPS é compartilhada com o FarmaVet (ERP + app). Por isso o gescola:
+#   - NÃO usa Nginx nativo (as portas 80/443 são do Traefik);
+#   - NÃO usa Postgres nativo (a 5432 é de container do FarmaVet);
+#   - entra na rede farmavet-net para o Traefik rotear para ele;
+#   - tem Postgres próprio (container e volume exclusivos).
+#
+# Uso na VPS (/opt/gescola/app):
+#   docker compose -f docker-compose.vps.yml --env-file .env.vps up -d --build
+#   docker compose -f docker-compose.vps.yml --env-file .env.vps run --rm migrate
+#
+# Variáveis esperadas no .env.vps:
+#   DB_PASSWORD      senha do PostgreSQL do gescola
+#   GESCOLA_DOMAIN   subdomínio público (ex.: gescola.seudominio.com.br)
+# ============================================
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: gescola-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gescola
+      POSTGRES_USER: gescola_app
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=pt_BR.UTF-8"
+      TZ: America/Sao_Paulo
+    volumes:
+      - /opt/gescola/db/data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gescola_app -d gescola"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gescola-net
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  app:
+    build:
+      context: .
+      target: runner
+    image: gescola-app:latest
+    container_name: gescola-app
+    restart: unless-stopped
+    env_file:
+      - .env.vps
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      DATABASE_URL: postgresql://gescola_app:${DB_PASSWORD}@gescola-postgres:5432/gescola?schema=public
+      AUTH_URL: https://${GESCOLA_DOMAIN}
+      AUTH_TRUST_HOST: "true"
+      STORAGE_PATH: /app/storage
+    volumes:
+      - /opt/gescola/storage:/app/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - gescola-net
+      - farmavet-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gescola.rule=Host(`${GESCOLA_DOMAIN}`)"
+      - "traefik.http.routers.gescola.entrypoints=websecure"
+      - "traefik.http.routers.gescola.tls=true"
+      - "traefik.http.routers.gescola.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.gescola.priority=10"
+      - "traefik.http.services.gescola.loadbalancer.server.port=3000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+          cpus: "1.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Ferramenta: aplica as migrations do Prisma.
+  # Não sobe com `up` (profile "tools"):  docker compose ... run --rm migrate
+  migrate:
+    build:
+      context: .
+      target: migrate
+    image: gescola-app:builder
+    profiles: ["tools"]
+    env_file:
+      - .env.vps
+    environment:
+      DATABASE_URL: postgresql://gescola_app:${DB_PASSWORD}@gescola-postgres:5432/gescola?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - gescola-net
+
+networks:
+  gescola-net:
+    driver: bridge
+  # Rede do Traefik do FarmaVet — o app entra nela para ser roteado.
+  farmavet-net:
+    external: true

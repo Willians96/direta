@@ -1,0 +1,28 @@
+# dependências e artefatos de build — nunca entram na imagem
+node_modules
+.next
+out
+dist
+build
+
+# segredos: as variáveis chegam por env_file / environment no compose
+.env
+.env.*
+!.env.example
+
+# dados locais
+storage
+backups
+*.log
+logs
+
+# git e tooling
+.git
+.gitignore
+.github
+.vscode
+.idea
+
+# docs que não são necessários no runtime
+*.md
+!README.md
