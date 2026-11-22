@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import { WhatsappQueueRow, type LinhaWhatsApp } from "@/components/shared/whatsapp/whatsapp-queue-row";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import { statusIA } from "@/lib/whatsapp/llm";
 import { formatDateTime } from "@/lib/utils";
 
@@ -24,12 +23,6 @@ export default async function FilaWhatsAppPage({
 }: {
   searchParams: Promise<{ filtro?: string }>;
 }) {
-  const session = await auth();
-  const role = (session?.user as any)?.role as string | undefined;
-  if (role === "RECEPCAO" || role === "VENDAS") {
-    // Vendas e Recepção não entram na fila de captação
-  }
-
   const params = await searchParams;
   const filtro = params.filtro ?? "todos";
 

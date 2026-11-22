@@ -117,8 +117,7 @@ export async function liberarLeadWhatsAppAction(raw: {
 
 /** Aplica apenas o curso sugerido pela análise. */
 export async function aplicarCursoWhatsAppAction(raw: { inboundId: string }) {
-  const ator = requireAtor();
-  await ator;
+  const ator = await requireAtor();
 
   const dados = z.object({ inboundId: z.string().min(1) }).parse(raw);
 
@@ -145,8 +144,7 @@ export async function aplicarCursoWhatsAppAction(raw: { inboundId: string }) {
 
 /** Aplica apenas o "status do cliente" sugerido pela análise. */
 export async function aplicarStatusWhatsAppAction(raw: { inboundId: string }) {
-  const ator = requireAtor();
-  await ator;
+  const ator = await requireAtor();
 
   const dados = z.object({ inboundId: z.string().min(1) }).parse(raw);
 
@@ -184,8 +182,7 @@ export async function aplicarStatusWhatsAppAction(raw: { inboundId: string }) {
 
 /** Reprocessa a análise da mensagem (regras + IA). */
 export async function reanalisarWhatsAppAction(raw: { inboundId: string }) {
-  const ator = requireAtor();
-  await ator;
+  const ator = await requireAtor();
 
   const dados = z.object({ inboundId: z.string().min(1) }).parse(raw);
 
@@ -234,8 +231,7 @@ export async function reanalisarWhatsAppAction(raw: { inboundId: string }) {
 
 /** Marca a mensagem como ignorada (spam, mensagem sem conteúdo). */
 export async function ignorarWhatsAppAction(raw: { inboundId: string }) {
-  const ator = requireAtor();
-  await ator;
+  const ator = await requireAtor();
 
   const dados = z.object({ inboundId: z.string().min(1) }).parse(raw);
 
@@ -257,8 +253,7 @@ export async function simularMensagemWhatsAppAction(raw: {
   telefone: string;
   mensagem: string;
 }) {
-  const ator = requireAtor();
-  await ator;
+  const ator = await requireAtor();
 
   const dados = z
     .object({
