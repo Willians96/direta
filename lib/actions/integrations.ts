@@ -5,7 +5,6 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import {
   CHAVES,
-  CHAVES_SECRETAS,
   gravarValor,
   obterValor,
   removerValor,
@@ -343,9 +342,4 @@ export async function testarIaAction(): Promise<ResultadoTeste> {
   } catch (e: any) {
     return { ok: false, mensagem: String(e?.message || e) };
   }
-}
-
-/** Lista de segredos (usado pela tela para explicar o que é e o que não é). */
-export function chavesSecretas() {
-  return CHAVES_SECRETAS;
 }
