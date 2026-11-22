@@ -1,29 +1,35 @@
 name: Deploy to VPS
 
 # ============================================================
-# ATIVADO APENAS POR DISPARO MANUAL.
+# Deploy do sistema na VPS própria (76.13.123.172).
 #
-# Antes de existir a VPS Hostinger, este workflow era disparado em TODO push
-# na `main` e falhava (não há host/chave SSH). A partir de agora ele só roda
-# sob demanda — em "Actions → Deploy to VPS → Run workflow" — ou quando o
-# job for reabilitado com `on: push` após a migração.
+# O deploy "oficial" hoje é manual, por SSH:
+#   ssh -i ~/.ssh/id_ed25519_direta_vps root@76.13.123.172 \
+#     "cd /opt/gescola/app && bash scripts/deploy-vps-docker.sh"
+#
+# Este workflow é a automação opcional do mesmo caminho (build da imagem →
+# migrations → recria o container → health check). Ele é disparado em
+# "Actions → Deploy to VPS → Run workflow" e só roda se a variável de
+# repositório VPS_ENABLED estiver como "true"
+# (Settings → Secrets and variables → Actions → Variables).
+#
+# A Vercel NÃO faz mais parte do fluxo: o sistema roda em app.scioti.tech,
+# na VPS, com Docker + Traefik.
 # ============================================================
 
 on:
   workflow_dispatch:
     inputs:
       skip_build:
-        description: "Pular o build (apenas migrations + reload)"
+        description: "Pular o build da imagem (apenas migrations + recreate)"
         type: boolean
         default: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     # Gate por variável do repositório (o contexto `secrets` NÃO é válido em `if` de job).
-    # Crie em Settings → Secrets and variables → Actions → Variables → VPS_ENABLED = true
-    # quando a VPS existir.
     if: ${{ vars.VPS_ENABLED == 'true' }}
 
     steps:
@@ -51,6 +57,11 @@ jobs:
       - name: Type check
         run: pnpm typecheck
 
+      - name: Lint
+        run: pnpm lint
+
+      # Build local só para pegar erro de compilação antes de tocar na VPS.
+      # O build que vale é o do Docker, feito no servidor.
       - name: Build
         run: pnpm build
         env:
@@ -65,18 +76,16 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd /var/app
-            bash scripts/deploy.sh ${{ inputs.skip_build && 'SKIP_BUILD=1' || '' }}
+            cd /opt/gescola/app
+            bash scripts/deploy-vps-docker.sh
 
       - name: Health check
-        run: |
-          for i in $(seq 1 10); do
-            sleep 10
-            if curl -fsS "http://${{ secrets.VPS_HOST }}:3000/api/health"; then
-              echo "aplicação saudável"
-              exit 0
-            fi
-            echo "aguardando ($i/10)"
-          done
-          echo "health check falhou"
-          exit 1
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            # O container não publica porta no host: o health check roda de dentro dele.
+            docker exec gescola-app curl -fsS http://localhost:3000/api/health
+            docker ps --filter name=gescola --format '{{.Names}}: {{.Status}}'
