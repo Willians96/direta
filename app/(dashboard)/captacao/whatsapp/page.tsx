@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MessageCircle, Plus, FlaskConical, Radio, Plug } from "lucide-react";
+import { MessageCircle, Plus, FlaskConical, Plug } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/shared/page-header";
 import { WhatsappQueueRow, type LinhaWhatsApp } from "@/components/shared/whatsapp/whatsapp-queue-row";
+import { WebhookUrl } from "@/components/shared/whatsapp/webhook-url";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import { statusIA } from "@/lib/whatsapp/llm";
 import { CHAVES, statusIntegracoes } from "@/lib/integrations";
 import { formatDateTime } from "@/lib/utils";
@@ -108,9 +110,17 @@ export default async function FilaWhatsAppPage({
           : itens;
 
   const ia = await statusIA();
-  const [sessao, statusConexao] = await Promise.all([auth(), statusIntegracoes()]);
+  const [sessao, statusConexao, headerList] = await Promise.all([
+    auth(),
+    statusIntegracoes(),
+    headers(),
+  ]);
   const ehAdmin = (sessao?.user as any)?.role === "ADMIN";
   const assinaturaAtiva = statusConexao[CHAVES.WHATSAPP_APP_SECRET].configurada;
+
+  const host = headerList.get("x-forwarded-host") || headerList.get("host") || "app.scioti.tech";
+  const proto = headerList.get("x-forwarded-proto") || "https";
+  const urlWebhook = `${proto}://${host}/api/whatsapp/webhook`;
 
   return (
     <div>
@@ -126,12 +136,14 @@ export default async function FilaWhatsAppPage({
                 Simulador
               </Link>
             </Button>
-            <Button variant="outline" asChild>
-              <a href="/api/whatsapp/webhook" target="_blank" rel="noopener noreferrer">
-                <Radio className="mr-2 h-4 w-4" />
-                Webhook
-              </a>
-            </Button>
+            {ehAdmin && (
+              <Button variant="outline" asChild>
+                <Link href="/admin/integracoes">
+                  <Plug className="mr-2 h-4 w-4" />
+                  Configurar conexão
+                </Link>
+              </Button>
+            )}
           </div>
         }
       />
@@ -248,8 +260,13 @@ export default async function FilaWhatsAppPage({
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-slate-600">
             <div>
-              <span className="font-medium text-slate-700">Webhook:</span>{" "}
-              <code className="rounded bg-slate-100 px-1">/api/whatsapp/webhook</code>
+              <span className="font-medium text-slate-700">Endereço do webhook:</span>{" "}
+              <span className="text-xs text-slate-500">
+                (cadastre este endereço no painel da Meta)
+              </span>
+              <div className="mt-1">
+                <WebhookUrl url={urlWebhook} />
+              </div>
             </div>
             <div>
               <span className="font-medium text-slate-700">Verificação:</span> o token do painel da
@@ -266,15 +283,6 @@ export default async function FilaWhatsAppPage({
               <span className="font-medium text-slate-700">Análise por IA:</span>{" "}
               {ia.configurada ? `ligada (${ia.modelo}).` : "desligada — só regras."}
             </div>
-
-            {ehAdmin && (
-              <Button variant="outline" size="sm" asChild className="mt-1">
-                <Link href="/admin/integracoes">
-                  <Plug className="mr-2 h-4 w-4" />
-                  Configurar conexão
-                </Link>
-              </Button>
-            )}
           </CardContent>
         </Card>
       </div>

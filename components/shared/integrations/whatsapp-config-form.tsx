@@ -2,11 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Save, PlugZap, Trash2, Loader2 } from "lucide-react";
+import { Save, PlugZap, Trash2, Loader2, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   removerIntegracaoAction,
   salvarWhatsappAction,
+  testarWebhookAction,
   testarWhatsappAction,
   type ActionState,
 } from "@/lib/actions/integrations";
@@ -51,6 +52,13 @@ export function WhatsappConfigForm({
     setTeste(null);
     startTestando(async () => {
       setTeste(await testarWhatsappAction());
+    });
+  };
+
+  const verificarWebhook = () => {
+    setTeste(null);
+    startTestando(async () => {
+      setTeste(await testarWebhookAction());
     });
   };
 
@@ -142,6 +150,17 @@ export function WhatsappConfigForm({
                 Testar conexão com a Meta
               </>
             )}
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={verificarWebhook}
+            disabled={isTestando}
+            title="Faz o mesmo teste que o painel da Meta faz ao salvar o webhook"
+          >
+            <Radio className="mr-2 h-4 w-4" />
+            Verificar webhook
           </Button>
         </div>
       </form>

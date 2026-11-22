@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import {
@@ -214,9 +215,60 @@ export async function removerIntegracaoAction(formData: FormData): Promise<Actio
 
 export type ResultadoTeste = { ok: boolean; mensagem: string };
 
-/** Testa o token de acesso e o número na API Graph da Meta. */
-export async function testarWhatsappAction(): Promise<ResultadoTeste> {
+/**
+ * Verifica o webhook chamando o próprio endereço com o desafio da Meta —
+ * o mesmo teste que o painel da Meta faz ao salvar o webhook.
+ */
+export async function testarWebhookAction(): Promise<ResultadoTeste> {
   try {
+    await requireAdmin();
+
+    const token = await obterValor(CHAVES.WHATSAPP_VERIFY_TOKEN);
+    if (!token) {
+      return { ok: false, mensagem: "Token de verificação não configurado." };
+    }
+
+    const h = await headers();
+    const host = h.get("x-forwarded-host") || h.get("host");
+    const proto = h.get("x-forwarded-proto") || "https";
+    const base = (process.env.AUTH_URL || `${proto}://${host}`).replace(/\/+$/, "");
+
+    const url = `${base}/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=${encodeURIComponent(
+      token
+    )}&hub.challenge=12345`;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10_000);
+
+    try {
+      const resposta = await fetch(url, { signal: controller.signal, cache: "no-store" });
+      const corpo = (await resposta.text()).trim();
+
+      if (resposta.ok && corpo === "12345") {
+        return {
+          ok: true,
+          mensagem: "Webhook respondendo — o desafio da Meta foi aceito.",
+        };
+      }
+
+      return {
+        ok: false,
+        mensagem: `Resposta inesperada (HTTP ${resposta.status})${
+          corpo ? `: ${corpo.slice(0, 120)}` : ""
+        }`,
+      };
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch (e: any) {
+    const msg =
+      e?.name === "AbortError" ? "tempo limite de 10s excedido" : String(e?.message || e);
+    return { ok: false, mensagem: `Falha ao chamar o webhook: ${msg}` };
+  }
+}
+
+/** Testa o token de acesso e o número na API Graph da Meta. */
+export async function testarWhatsappAction(): Promise<ResultadoTeste> {  try {
     await requireAdmin();
 
     const accessToken = await obterValor(CHAVES.WHATSAPP_ACCESS_TOKEN);
