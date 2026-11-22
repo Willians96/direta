@@ -178,18 +178,8 @@ function LoginForm() {
             </Button>
           </form>
 
-          {/* Demo credentials */}
-          <div className="rounded-md border border-dashed border-direta-orange/30 bg-direta-orange/5 p-3 text-xs text-slate-700">
-            <div className="font-semibold text-direta-orange-dark mb-1">
-              🔐 Acesso de demonstração:
-            </div>
-            <ul className="space-y-0.5 break-all font-mono text-[11px] sm:text-xs">
-              <li>ana@direta.com · ana@direta</li>
-              <li>captacao@direta.com · captacao123</li>
-              <li>vendas@direta.com · vendas123</li>
-              <li>recepcao@direta.com · recepcao123</li>
-            </ul>
-          </div>
+          {/* Sem lista de credenciais: em produção as senhas são entregues
+              individualmente pelo administrador da escola. */}
         </div>
       </div>
     </div>

@@ -46,14 +46,12 @@ pnpm dev
 # → http://localhost:3000
 ```
 
-### 🔐 Credenciais de Demonstração
+### 🔐 Acesso ao sistema
 
-| Perfil | E-mail | Senha |
-|---|---|---|
-| **Administrador** | ana@direta.com | ana@direta |
-| **Captação** | captacao@direta.com | captacao123 |
-| **Vendas** | vendas@direta.com | vendas123 |
-| **Recepção** | recepcao@direta.com | recepcao123 |
+As credenciais **não ficam neste repositório** (o repositório é público). Elas são
+criadas pelo administrador em `Administração → Usuários` e entregues individualmente
+a cada pessoa. O `prisma/seed.ts` popula o banco local de desenvolvimento com
+contas de teste.
 
 ---
 
