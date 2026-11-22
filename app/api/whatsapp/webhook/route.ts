@@ -43,6 +43,29 @@ export async function GET(req: NextRequest) {
     return new NextResponse(desafio, { status: 200 });
   }
 
+  // Sem hub.mode é uma pessoa abrindo a URL no navegador — e não a Meta.
+  // Em vez de uma página "Forbidden" em branco, mostramos como verificar.
+  if (!modo) {
+    return new NextResponse(
+      [
+        "Webhook do WhatsApp (Meta Cloud API) - ativo.",
+        "",
+        "Esta URL é chamada pela Meta, não por pessoas. Para o desafio de",
+        "verificação o endereço precisa ir com os parâmetros:",
+        "",
+        "/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=<token>&hub.challenge=<numero>",
+        "",
+        "O token de verificação é o valor da variável WHATSAPP_VERIFY_TOKEN",
+        "cadastrada no servidor. O POST (mensagens recebidas) só é aceito com",
+        "a assinatura HMAC (X-Hub-Signature-256) e exige a variável",
+        "WHATSAPP_APP_SECRET configurada.",
+      ].join("\n"),
+      { status: 200, headers: { "Content-Type": "text/plain; charset=utf-8" } }
+    );
+  }
+
+  // Meta enviou o desafio mas o token/challenge não conferem: precisa falhar
+  // para o painel mostrar "verificação não concluída" em vez de aceitar.
   return new NextResponse("Forbidden", { status: 403 });
 }
 
