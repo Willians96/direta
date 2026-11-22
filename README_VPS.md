@@ -1,226 +1,209 @@
-# 🚀 Migração para VPS Hostinger — Runbook
+# 🚀 GESCOLA na VPS — Runbook de operação
 
-> **Estado atual (out/2026):** o sistema roda na **Vercel** (https://direta-ten.vercel.app) enquanto a
-> Direta Cursos não fecha a Fase 1. A VPS **ainda não foi contratada** — este documento é a
-> preparação: tudo que está aqui já está pronto no repositório e será executado no dia da migração.
+> **Estado atual (nov/2026):** o sistema roda **na VPS `76.13.123.172`** (Ubuntu 24.04 LTS), em
+> containers Docker, atrás do **Traefik** que já serve o FarmaVet. A URL pública depende do
+> subdomínio configurado em `GESCOLA_DOMAIN`.
+>
+> A Vercel (`direta-ten.vercel.app`) continua no ar como **rede de segurança**, mas aponta para o
+> Neon — a fonte de verdade do dia a dia é o PostgreSQL da VPS.
 
 ---
 
-## 1. Decisões já tomadas
+## 1. Por que a topologia é esta
 
-| Tema | Decisão | Por quê |
+A VPS **não é dedicada**: ela hospeda o **FarmaVet** (ERP + app da farmácia), que está em produção
+em `farmaciafarmavet.com.br`. Por isso o gescola **não** usa o setup nativo (Nginx + PM2 +
+Postgres do sistema) que está em `scripts/setup-vps.sh` — aquele setup assumes uma máquina
+exclusiva e conflitaria com o que já está rodando.
+
+| Recurso | Quem usa | Como o gescola ficou |
 |---|---|---|
-| Hosting | **Nativo (PM2 + Nginx + PostgreSQL)** | Mais leve que Docker em VPS de 2–4 GB; sem dependência de Docker na Hostinger |
-| Banco | **PostgreSQL na própria VPS** | Elimina custo e dependência do Neon; o dump do Neon vira o ponto de partida |
-| Domínio | **Ainda não contratado** | Setup preparado para acesso por IP; SSL (certbot) fica para quando houver domínio |
-| Deploy | `git pull` + `pnpm build` + `pm2 reload` | Mesmo repositório, mesmo fluxo de código |
-| Persistência de documentos | Filesystem em `/var/app/storage` | Na Vercel o filesystem é efêmero (ver seção 6) |
+| Portas 80 / 443 | Traefik (FarmaVet) | O gescola entra como **container na rede do Traefik** e vira um router novo |
+| Postgres 5432 | container `farmavet-postgres` | O gescola tem o **seu próprio** container `gescola-postgres` (PG18) |
+| Postgres 5433 | container `farmavet-erp-postgres` | não tocado |
+| Porta 8081 | `farmavet-pgadmin` | não tocado |
+| UFW (22, 80, 443, 8081) | FarmaVet | **inalterado** — o gescola não abre porta nova |
+
+Nenhum container do FarmaVet foi parado, recriado ou reconfigurado na migração.
 
 ---
 
-## 2. Topologia alvo
+## 2. Topologia atual
 
 ```
-Internet ──▶ Nginx :80 (:443 quando houver domínio)
-                 │  proxy reverso + limites de upload
+Internet ──▶ Traefik (farmavet-traefik) :80 → :443
+                 │  Host(gescola.<dominio>)  ──▶ gescola-app  (container, :3000)
+                 │  Host(farmaciafarmavet…) ──▶ farmavet-app (container, :3000)
                  ▼
-             Next.js :3000  (PM2, usuário "deploy", /var/app)
-                 │
-                 ├──▶ PostgreSQL 16 :5432  (localhost, senha scram-sha-256)
-                 └──▶ /var/app/storage/leads/<leadId>/<uuid>.<ext>   (documentos)
+          gescola-postgres (PG18, só rede interna)
+          /opt/gescola/storage  (documentos — disco persistente)
 ```
 
-Portas expostas na internet: **22 (SSH)** e **80 (HTTP)**. O PostgreSQL fica só em `127.0.0.1`.
+| Container | Imagem | Rede | Observação |
+|---|---|---|---|
+| `gescola-app` | `gescola-app:latest` (build local) | `app_gescola-net` + `farmavet-net` | Node 22, saída Next.js *standalone*, porta 3000 |
+| `gescola-postgres` | `postgres:18-alpine` | `app_gescola-net` | PG18 = mesma versão do Neon, semtranslation de dump |
 
----
+Diretórios na VPS:
 
-## 3. Pré-requisitos da VPS
-
-| Item | Mínimo | Observação |
-|---|---|---|
-| Sistema | Ubuntu 22.04 ou 24.04 LTS | Hostinger KVM entrega 22.04/24.04 |
-| RAM | 2 GB (4 GB recomendado) | O setup cria 2 GB de swap se RAM < 4 GB |
-| vCPU | 2 | — |
-| Disco | 40 GB SSD | 20 GB bastam para app + banco + backups |
-| Acesso | SSH com chave pública | Criar usuário `deploy` no setup |
-
----
-
-## 4. Execução no dia da migração
-
-### 4.1 Setup da VPS (uma vez, ~5 min)
-
-```bash
-# na VPS, como root, dentro do repo clonado
-chmod +x scripts/setup-vps.sh
-sudo env DOMAIN="" ./scripts/setup-vps.sh
-```
-
-O script instala e configura: Node 20 + pnpm 12 + PM2 (com boot automático), PostgreSQL 16
-(tuning por RAM, escopo `localhost`, senha `scram-sha-256`), Nginx (proxy, upload de 20 MB,
-cabeçalhos de segurança, gzip), UFW, Fail2ban, backup diário (banco + documentos) e um
-`.env.production` modelo em `/var/app`.
-
-> Guarde a senha do banco que ele imprimir — ela não existe em mais nenhum lugar.
-
-### 4.2 Publicar o código
-
-```bash
-cd /var/app
-git clone https://github.com/Willians96/direta.git .
-corepack enable && pnpm install --frozen-lockfile
-```
-
-### 4.3 Ajustar o ambiente
-
-Edite `/var/app/.env.production` (permissão `600`):
-
-```bash
-DATABASE_URL="postgresql://gescola_app:SENHA@127.0.0.1:5432/gescola?schema=public"
-AUTH_SECRET="<openssl rand -base64 32>"
-AUTH_URL="http://IP_PUBLICO_DA_VPS"     # por enquanto sem TLS
-AUTH_TRUST_HOST="true"
-STORAGE_PATH="/var/app/storage"
-NODE_ENV="production"
-```
-
-### 4.4 Migrar os dados do Neon para o Postgres da VPS
-
-Rode **na VPS** (ela alcança o Neon pela internet):
-
-```bash
-export NEON_DATABASE_URL="postgresql://...@ep-xxx.aws.neon.tech/neondb?sslmode=require"
-export DATABASE_URL="postgresql://gescola_app:SENHA@127.0.0.1:5432/gescola?schema=public"
-bash scripts/migrate-db-neon-to-vps.sh
-```
-
-O script faz dump → restauração → **compara a contagem de linhas** de `User`, `Lead`, `Followup`,
-`Enrollment`, `Goal`, `LeadMessage`, `EnrollmentAudit` e `Document` entre origem e destino, e
-avisa se houver divergência (código de saída 2). O dump é mantido em `/var/backups/pg`.
-
-> O dump inclui `_prisma_migrations`, então `prisma migrate deploy` não repete migrations.
-
-### 4.5 Subir a aplicação
-
-```bash
-cd /var/app
-pnpm prisma migrate deploy
-pnpm build
-pm2 start ecosystem.config.js --update-env && pm2 save
-curl http://127.0.0.1:3000/api/health
-```
-
-Resposta esperada: `{"status":"ok","database":"connected",...}`
-
-### 4.6 Conferir pelo navegador
-
-- `http://IP_DA_VPS/login` — login com as credenciais de demonstração
-- `http://IP_DA_VPS/api/health`
-- `http://IP_DA_VPS/vendas/leads` — lista carregando (confere banco **e** build de produção)
-
----
-
-## 5. Operação depois da migração
-
-### Deploy de uma nova versão
-
-```bash
-cd /var/app && bash scripts/deploy.sh
-```
-
-ou, pelo GitHub Actions, disparo manual em **Actions → Deploy to VPS → Run workflow** (o
-workflow só dispara por `workflow_dispatch` enquanto não houver VPS; ver seção 7).
-
-Secrets no GitHub: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `DOMAIN`, `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`.
-Variável do repositório: `VPS_ENABLED = true` (Settings → Secrets and variables → Actions → Variables) —
-é ela que habilita o job, já que o contexto `secrets` não pode ser usado no `if` de um job.
-
-### Backup e restauração
-
-```bash
-# backup manual
-sudo /etc/cron.daily/backup-gescola
-
-# restaurar
-gunzip -c /var/backups/pg/gescola-AAAAMMDD-HHMM.sql.gz | \
-  psql "postgresql://gescola_app:SENHA@127.0.0.1:5432/gescola" --set ON_ERROR_STOP=1
-```
-
-Backup diário automático (02:00-ish, pelo cron do sistema) em `/var/backups/pg` e
-`/var/backups/storage`, com 30 dias de retenção. **Copie esses arquivos para fora da VPS**
-(smartphone, Google Drive, outra máquina) — backup que fica só no mesmo servidor não é backup.
-
-### Quando comprar o domínio
-
-```bash
-# 1. Aponte o DNS (A record) para o IP da VPS
-# 2. Troque o server_name no Nginx
-sudo sed -i "s/server_name _;/server_name app.seudominio.com.br;/" /etc/nginx/sites-available/gescola
-sudo nginx -t && sudo systemctl reload nginx
-# 3. Emita o certificado
-sudo certbot --nginx -d app.seudominio.com.br
-# 4. Atualize o AUTH_URL
-sudo sed -i "s#^AUTH_URL=.*#AUTH_URL=\"https://app.seudominio.com.br\"#" /var/app/.env.production
-cd /var/app && pm2 reload ecosystem.config.js --update-env
-```
-
-### Rollback
-
-```bash
-cd /var/app
-git log --oneline -5            # escolher o commit anterior
-git checkout <commit>
-pnpm install --frozen-lockfile && pnpm build
-pm2 reload ecosystem.config.js --update-env
-```
-
-Para o banco, o rollback é o `pg_restore` de um backup (seção 5).
-
----
-
-## 6. Limitações conhecidas (e como a migração resolve)
-
-| Limitação | Onde aparece | Solução na VPS |
-|---|---|---|
-| **Documentos somem na Vercel** | Upload grava em `./storage`, que é efêmero no serverless — o arquivo é perdido no próximo deploy da Vercel | `/var/app/storage` é disco persistente |
-| Sem SSL | Today o domínio da Vercel tem TLS automático | `certbot` no Nginx (§5) |
-| Cold start | ~1 s de delay na Vercel free tier | PM2 keep-alive, resposta imediata |
-| Limite de execução | 10 s (free) / 60 s (pro) na Vercel | Sem limite relevante no Node da VPS |
-| Sem SSH | Vercel não expõe shell | Acesso SSH completo para dumps, logs e manutenção |
-
-> **Atenção ao uso do protótipo na Vercel:** documentos enviados hoje **não sobrevivem a um
-> redeploy**. Para a demonstração comercial, faça o upload de documentos perto da hora da
-> apresentação, ou suba a VPS antes.
-
----
-
-## 7. O que mudou no repositório para suportar a VPS
-
-| Arquivo | Mudança |
+| Caminho | Conteúdo |
 |---|---|
-| `scripts/setup-vps.sh` | Reescrito: pnpm via corepack, PM2 com boot automático, swap por RAM, tuning do Postgres por RAM, Nginx pronto para IP, backup de banco **e** documentos, modelo de `.env.production` |
-| `scripts/deploy.sh` | Reescrito: corepack, `migrate deploy`, `pm2 reload --update-env`, `pm2 save`, health check com espera e logs em caso de falha |
-| `scripts/migrate-db-neon-to-vps.sh` | **Novo**: dump do Neon → restore na VPS com verificação de contagem de linhas |
-| `ecosystem.config.js` | Limite de memória conforme RAM da VPS, `kill_timeout`, `time` |
-| `.env.example` | Seção da VPS (URL local, `STORAGE_PATH` absoluto, `AUTH_URL` por IP) |
-| `.github/workflows/deploy.yml` | Passou a ser **manual** (`workflow_dispatch`) — antes disparava em todo push na `main` e falhava por não existir VPS |
-| `pnpm-workspace.yaml` + `package.json` | `allowBuilds` explícito e `packageManager` fixado em pnpm 12.4.1 — installs limpos (CI e VPS) passam a behave igual ao local |
+| `/opt/gescola/app` | clone do repositório (`git pull` para atualizar) |
+| `/opt/gescola/app/.env.vps` | **segredos** (senha do banco, AUTH_SECRET, domínio) — permissão `600` |
+| `/opt/gescola/db/pgdata` | dados do PostgreSQL 18 (**não versionar, não apagar**) |
+| `/opt/gescola/storage` | documentos enviados pelos vendedores |
+| `/opt/gescola/backups` | dumps do banco e dos documentos |
 
 ---
 
-## 8. Checklist "dia da migração"
+## 3. Publicar uma nova versão
 
-- [ ] VPS Hostinger contratada (Ubuntu 22.04/24.04, 2 vCPU, 4 GB RAM)
-- [ ] Chave SSH configurada e `deploy` acessível
-- [ ] `sudo env DOMAIN="" ./scripts/setup-vps.sh` executado sem erro
-- [ ] Senha do banco anotada em local seguro
-- [ ] Código publicado em `/var/app` (`git clone`)
-- [ ] `.env.production` ajustado (`AUTH_SECRET`, `AUTH_URL` com o IP público)
-- [ ] `bash scripts/migrate-db-neon-to-vps.sh` sem divergências
-- [ ] `pnpm build` + `pm2 start` + `pm2 save`
-- [ ] `/api/health` respondendo `ok`
-- [ ] Login e navegação testados no navegador pelo IP
-- [ ] Upload de documento testado (grava e lê do disco)
-- [ ] Backup manual disparado e **copiado para fora da VPS**
-- [ ] DNS + certbot (quando houver domínio)
-- [ ] Neon mantido como rede de segurança por 7 dias, depois desligado
+```bash
+cd /opt/gescola/app
+bash scripts/deploy-vps-docker.sh
+```
+
+O script faz: `git pull` → build da imagem → `prisma migrate deploy` → recria o container do app
+→ health check em `/api/health`. O container do **banco nunca é recriado** (os dados ficam em
+`/opt/gescola/db/pgdata`).
+
+Deploy manual equivalente:
+
+```bash
+cd /opt/gescola/app
+docker compose -f docker-compose.vps.yml --env-file .env.vps build app
+docker compose -f docker-compose.vps.yml --env-file .env.vps run --rm migrate
+docker compose -f docker-compose.vps.yml --env-file .env.vps up -d app
+docker exec gescola-app curl -fsS http://localhost:3000/api/health
+```
+
+> O `scripts/deploy.sh` (PM2 + Nginx) fica para uma VPS **exclusiva**. Aqui quem vale é o
+> `scripts/deploy-vps-docker.sh`.
+
+---
+
+## 4. Domínio e SSL
+
+O Traefik já tem o resolver **Let's Encrypt** configurado (`letsencrypt`, ACME HTTP challenge).
+Para o gescola:
+
+1. **DNS**: crie o registro **A** do subdomínio apontando para `76.13.123.172`
+   (ex.: `gescola.seudominio.com.br → 76.13.123.172`)
+2. **VPS**: ajuste o domínio no arquivo de ambiente e recrie o container
+
+   ```bash
+   cd /opt/gescola/app
+   sed -i 's#^GESCOLA_DOMAIN=.*#GESCOLA_DOMAIN="gescola.seudominio.com.br"#' .env.vps
+   docker compose -f docker-compose.vps.yml --env-file .env.vps up -d --force-recreate app
+   ```
+
+3. O Traefik pede o certificado sozinho (o router novo usa `certresolver=letsencrypt`) e
+   renova antes de expirar
+4. Confira: `docker logs farmavet-traefik --tail 20 | grep -i gescola`
+
+> Enquanto o DNS não aponta, o app responde **apenas internamente**. Para testar sem domínio:
+> `curl -sk -H "Host: gescola.pendente.local" https://127.0.0.1/login` (na própria VPS).
+
+---
+
+## 5. WhatsApp (Sprint 22)
+
+O webhook fica em:
+
+```
+https://<seu-subdominio>/api/whatsapp/webhook
+```
+
+| Item | Onde |
+|---|---|
+| Token de verificação | `WHATSAPP_VERIFY_TOKEN` no `.env.vps` (o mesmo da Vercel) |
+| Assinatura | `WHATSAPP_APP_SECRET` — **ainda não cadastrado** (enquanto não houver, o POST responde 503) |
+| Análise por IA | `LLM_API_KEY` — **ainda não cadastrado** (a análise roda só por regras) |
+
+O passo a passo para criar a conta na Meta está em `GUIA_WHATSAPP_META.md`.
+Depois de cadastrar uma variável nova na Vercel **e** na VPS, lembre-se: variável de ambiente
+**só entra em vigor em novo deploy**.
+
+---
+
+## 6. Backup e restauração
+
+Backup diário automático (cron do sistema, por volta das 03:00):
+
+| Arquivo | Onde |
+|---|---|
+| banco | `/opt/gescola/backups/gescola-AAAAMMDD-HHMM.sql.gz` |
+| documentos | `/opt/gescola/backups/storage-AAAAMMDD-HHMM.tar.gz` |
+| log | `/var/log/gescola-backup.log` |
+
+Rodar na mão:
+
+```bash
+/etc/cron.daily/backup-gescola
+```
+
+Restaurar o banco:
+
+```bash
+gunzip -c /opt/gescola/backups/gescola-AAAAMMDD-HHMM.sql.gz | \
+  docker exec -i gescola-postgres psql -U gescola_app -d gescola --set ON_ERROR_STOP=1
+```
+
+> **Copie os backups para fora da VPS** (Drive, outra máquina, etc.). Backup que fica só no
+> mesmo servidor não é backup.
+
+---
+
+## 7. Migração dos dados (Neon → VPS) — como foi feita
+
+```bash
+# 1. dump da origem (PostgreSQL 18 do Neon)
+docker run --rm --env-file /root/.neon.env -v /opt/gescola/backups:/backups \
+  postgres:18-alpine sh -c 'pg_dump --no-owner --no-acl --format=plain --no-comments | gzip > /backups/neon.sql.gz'
+
+# 2. restore no banco da VPS
+gunzip -c /opt/gescola/backups/neon.sql.gz | \
+  docker exec -i gescola-postgres psql -U gescola_app -d gescola --set ON_ERROR_STOP=1
+```
+
+O dump inclui a tabela `_prisma_migrations`, então o `prisma migrate deploy` seguinte não repete
+migration. A conferência de contagem de linhas (12 tabelas) deu **zero divergências**.
+
+O Neon continua no ar como rede de segurança — **não apague** até a Fase 1 fechar.
+
+---
+
+## 8. Diagnóstico rápido
+
+```bash
+# status dos containers
+docker ps --filter name=gescola --format '{{.Names}}: {{.Status}}'
+
+# health do app
+docker exec gescola-app curl -fsS http://localhost:3000/api/health
+
+# logs do app
+docker logs gescola-app --tail 50
+
+# logs do Traefik (roteamento e certificado)
+docker logs farmavet-traefik --tail 50 | grep -i gescola
+
+# banco
+docker exec gescola-postgres psql -U gescola_app -d gescola -c '\dt'
+```
+
+---
+
+## 9. Checklist do que falta para fechar a Fase 1
+
+- [x] Código na VPS (container, Traefik, PostgreSQL dedicado)
+- [x] Dados migrados do Neon com conferência de contagem
+- [x] Backup diário instalado e testado
+- [ ] Subdomínio apontando para `76.13.123.172` (DNS)
+- [ ] `GESCOLA_DOMAIN` ajustado + certificado emitido
+- [ ] `WHATSAPP_APP_SECRET` cadastrado (destrava o webhook real da Meta)
+- [ ] `LLM_API_KEY` cadastrado (liga a análise por IA)
+- [ ] `AUTH_URL`/URL pública propagada para a Vercel (ou Vercel desligada)
+- [ ] Upload de documento testado no volume `/opt/gescola/storage`
+- [ ] Backup copiado para fora da VPS
+- [ ] Senha do Neon rotacionada (o dump antigo ficou em disco)
