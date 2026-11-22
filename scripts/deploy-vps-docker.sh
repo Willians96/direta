@@ -20,7 +20,9 @@ set -euo pipefail
 
 APP_DIR="${APP_DIR:-/opt/gescola/app}"
 COMPOSE="docker compose -f docker-compose.vps.yml --env-file .env.vps"
-HEALTH_URL="http://127.0.0.1:3000/api/health"
+HEALTH_URL="http://localhost:3000/api/health"
+# O container não publica porta no host: o health check roda de dentro dele.
+HEALTH_CMD="docker exec gescola-app curl -fsS $HEALTH_URL"
 MAX_TENTATIVAS=15
 
 cd "$APP_DIR"
@@ -37,14 +39,20 @@ $COMPOSE build app
 log "migrations do Prisma"
 $COMPOSE run --rm migrate
 
+log "garantindo permissao do storage (o container roda como nextjs, uid 1001)"
+# Sem isso o storage cai no fallback /tmp e os documentos somem a cada deploy.
+mkdir -p /opt/gescola/storage
+chown -R 1001:1001 /opt/gescola/storage
+
 log "subindo o app"
 $COMPOSE up -d app
 
-log "health check ($HEALTH_URL)"
+log "health check (dentro do container: $HEALTH_URL)"
 for i in $(seq 1 $MAX_TENTATIVAS); do
   sleep 4
-  if curl -fsS "$HEALTH_URL" >/dev/null 2>&1; then
+  if $HEALTH_CMD >/dev/null 2>&1; then
     echo -e "\n    aplicacao saudavel (tentativa $i)"
+    $HEALTH_CMD && echo
     $COMPOSE ps
     exit 0
   fi
