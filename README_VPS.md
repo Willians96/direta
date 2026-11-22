@@ -121,6 +121,11 @@ https://app.scioti.tech/api/whatsapp/webhook
 | Assinatura | `WHATSAPP_APP_SECRET` — **ainda não cadastrado** (enquanto não houver, o POST responde 503) |
 | Análise por IA | `LLM_API_KEY` — **ainda não cadastrado** (a análise roda só por regras) |
 
+> **Precedência:** a tela **Administração → Integrações** (`/admin/integracoes`) grava as
+> credenciais no banco do sistema (segredos criptografados) e elas **valem na hora, sem novo
+> deploy**. O valor salvo no painel tem prioridade sobre a variável de ambiente do `.env.vps`;
+> remover o valor do painel faz a variável do servidor voltar a valer.
+
 > Abrir a URL do webhook no navegador, sem os parâmetros da Meta, responde
 > `403 Forbidden` — é o comportamento correto (a rota só aceita o desafio com
 > `hub.mode=subscribe` + token + challenge). Para testar:
