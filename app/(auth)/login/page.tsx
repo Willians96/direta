@@ -35,6 +35,7 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mostrarAjudaSenha, setMostrarAjudaSenha] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -150,12 +151,13 @@ function LoginForm() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Senha</Label>
-                <a
-                  href="/forgot-password"
+                <button
+                  type="button"
+                  onClick={() => setMostrarAjudaSenha((v) => !v)}
                   className="text-xs text-direta-orange hover:underline"
                 >
                   Esqueceu?
-                </a>
+                </button>
               </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -177,6 +179,17 @@ function LoginForm() {
               Entrar
             </Button>
           </form>
+
+          {/* Recuperação de senha: não há fluxo automático (o sistema não envia
+              e-mail). O caminho é pedir a redefinição ao administrador. */}
+          {mostrarAjudaSenha && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+              <span className="font-medium">Esqueceu a senha?</span> Peça ao administrador da
+              escola para redefinir a sua senha em{" "}
+              <span className="font-mono">Administração → Usuários</span>. Depois de entrar, troque
+              a senha em <span className="font-mono">Meu Perfil → Alterar senha</span>.
+            </div>
+          )}
 
           {/* Sem lista de credenciais: em produção as senhas são entregues
               individualmente pelo administrador da escola. */}
