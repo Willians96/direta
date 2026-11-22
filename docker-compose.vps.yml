@@ -28,7 +28,9 @@ services:
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=pt_BR.UTF-8"
       TZ: America/Sao_Paulo
     volumes:
-      - /opt/gescola/db/data:/var/lib/postgresql/data
+      # PostgreSQL 18 usa diretório versionado: monta-se em /var/lib/postgresql
+      # e a imagem cria o subdiretório da versão major (18/docker) dentro dele.
+      - /opt/gescola/db/pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U gescola_app -d gescola"]
       interval: 10s
