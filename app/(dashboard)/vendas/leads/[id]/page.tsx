@@ -24,8 +24,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { SalesStatusBadge } from "@/components/shared/sales-status-badge";
+import {
+  SalesStatusBadge,
+  getSalesStatusLabel,
+} from "@/components/shared/sales-status-badge";
 import { PageHeader } from "@/components/shared/page-header";
 import { RegisterFollowupDialog } from "@/components/shared/followups/register-followup-dialog";
 import { FollowupHistoryTable } from "@/components/shared/followups/followup-history-table";
@@ -50,6 +54,7 @@ export default async function LeadDetailPage({
     where: { id },
     include: {
       course: { select: { name: true } },
+      aiCourse: { select: { name: true } },
       campaign: { select: { name: true } },
       assignedTo: { select: { id: true, name: true, email: true, phone: true } },
       createdBy: { select: { id: true, name: true } },
@@ -180,6 +185,78 @@ export default async function LeadDetailPage({
               )}
             </CardContent>
           </Card>
+
+          {/* Análise da captação via WhatsApp */}
+          {lead.aiSummary && (
+            <Card className="border-sky-200 bg-sky-50/40">
+              <CardHeader>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <MessageSquare className="h-4 w-4 text-direta-orange" />
+                      Análise do WhatsApp
+                    </CardTitle>
+                    <CardDescription>
+                      Gerada automaticamente na captação
+                      {lead.aiAnalyzedAt
+                        ? ` · ${formatDateTime(lead.aiAnalyzedAt)}`
+                        : ""}
+                    </CardDescription>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    {lead.aiScore !== null && (
+                      <Badge
+                        variant={
+                          lead.aiScore >= 70
+                            ? "success"
+                            : lead.aiScore >= 40
+                              ? "warning"
+                              : "neutral"
+                        }
+                      >
+                        interesse {lead.aiScore}
+                      </Badge>
+                    )}
+                    <span className="text-[10px] text-slate-400">
+                      {lead.aiModel === "llm" ? "análise por IA" : "análise por regras"}
+                    </span>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <p className="text-slate-800">{lead.aiSummary}</p>
+
+                <div className="flex flex-wrap gap-2">
+                  {lead.aiIntent && <Badge variant="neutral">{lead.aiIntent}</Badge>}
+                  {lead.aiStatus && (
+                    <Badge variant="warning">
+                      status sugerido: {getSalesStatusLabel(lead.aiStatus)}
+                    </Badge>
+                  )}
+                  {lead.aiCourse && (
+                    <Badge variant="info">curso sugerido: {lead.aiCourse.name}</Badge>
+                  )}
+                  {lead.aiTags.map((tag) => (
+                    <Badge key={tag} variant="neutral">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+
+                <Button variant="outline" size="sm" asChild>
+                  <a
+                    href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Abrir conversa no WhatsApp
+                    <ExternalLink className="ml-2 h-3 w-3" />
+                  </a>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Histórico de Follow-ups em tabela (formato da cliente) */}
           <FollowupHistoryTable items={followups} />

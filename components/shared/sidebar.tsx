@@ -17,6 +17,7 @@ import {
   TrendingUp,
   AlertTriangle,
   MessageCircle,
+  MessageSquare,
   ChevronDown,
   X,
   BarChart3,
@@ -49,6 +50,7 @@ const NAV_ITEMS: NavItem[] = [
   { title: "Dashboard", href: "/captacao", icon: LayoutDashboard, roles: ["ADMIN", "CAPTACAO"] },
   { title: "Leads", href: "/captacao/leads", icon: UserPlus, roles: ["ADMIN", "CAPTACAO"] },
   { title: "Campanhas", href: "/captacao/campanhas", icon: Megaphone, roles: ["ADMIN", "CAPTACAO"] },
+  { title: "WhatsApp", href: "/captacao/whatsapp", icon: MessageSquare, roles: ["ADMIN", "CAPTACAO"] },
 
   // Vendas
   { title: "Meu Funil", href: "/vendas", icon: Target, roles: ["ADMIN", "VENDAS"] },

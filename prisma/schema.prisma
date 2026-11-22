@@ -142,6 +142,7 @@ model Course {
 
   classes         Class[]
   leads           Lead[]
+  aiLeads         Lead[]         @relation("LeadAiCourse")
   enrollments     Enrollment[]
   paymentMethods  CoursePaymentMethod[]
 
@@ -348,6 +349,21 @@ model Lead {
   createdById  String
   notes        String?      @db.Text
   lostReason   String?      @db.Text
+
+  // ---- Captação via WhatsApp (Sprint 22) ----
+  // "wa_id" do contato no WhatsApp (E.164 sem o +). Chave de identificação.
+  whatsappId   String?
+  // Análise automática da primeira mensagem (regras + IA).
+  aiSummary    String?      @db.Text // resumo em 2-3 linhas para o time de vendas
+  aiTags       String[]     @default([]) // tags detectadas (boleto, visita, presencial...)
+  aiScore      Int?         // interesse estimado, 0-100
+  aiIntent     String?      // intenção: duvida, matricula, pagamento, agendamento...
+  aiStatus     SalesStatus? // "status do cliente" sugerido pela análise
+  aiCourseId   String?      // curso sugerido pela análise (ainda não aplicado)
+  aiModel      String?      // "llm" (análise por IA) ou "regras" (sem IA)
+  aiRaw        String?      @db.Text // resposta bruta da IA (auditoria)
+  aiAnalyzedAt DateTime?
+
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
@@ -355,6 +371,7 @@ model Lead {
   campaign     Campaign?       @relation(fields: [campaignId], references: [id])
   assignedTo   User?           @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
   createdBy    User            @relation("LeadCreator", fields: [createdById], references: [id])
+  aiCourse     Course?         @relation("LeadAiCourse", fields: [aiCourseId], references: [id])
   interactions Interaction[]
   followups    Followup[]
   messages     LeadMessage[]
@@ -363,10 +380,12 @@ model Lead {
   documents    Document[]
   audits       EnrollmentAudit[]
   classStudents ClassStudent[]
+  whatsappInbounds WhatsappInbound[]
 
   @@index([status])
   @@index([assignedToId])
   @@index([campaignId])
+  @@index([whatsappId])
   @@map("leads")
 }
 
@@ -495,6 +514,47 @@ model Interaction {
 
   @@index([leadId])
   @@map("interactions")
+}
+
+// ============================================
+// CAPTAÇÃO VIA WHATSAPP (Sprint 22)
+// ============================================
+// Cada mensagem recebida no WhatsApp da Captação vira um registro aqui.
+// Serve para: deduplicar (a Meta reenvia a mesma mensagem), auditar o
+// payload original e guardar a análise gerada antes de virar Lead.
+
+enum WhatsappInboundStatus {
+  // Mensagem gravada, aguardando análise
+  RECEBIDA
+  // Analisada (por IA ou por regras) e lead criado/atualizado
+  ANALISADA
+  // Mensagem sem utilidade (status de entrega, mídia sem texto, spam)
+  IGNORADA
+  // Falha no processamento (detalhada em "error")
+  ERRO
+}
+
+model WhatsappInbound {
+  id         String                @id @default(cuid())
+  wamid      String                @unique // id da mensagem na Meta (chave de dedupe)
+  waId       String                // contato em E.164 (5511987654321)
+  phone      String                // telefone normalizado no formato do sistema
+  pushname   String? // nome do perfil no WhatsApp
+  type       String // text | image | audio | document | location...
+  body       String                @db.Text // texto extraído da mensagem
+  status     WhatsappInboundStatus @default(RECEBIDA)
+  analysis   String?               @db.Text // JSON da análise (regras + IA)
+  error      String?               @db.Text
+  leadId     String?
+  receivedAt DateTime              @default(now())
+  createdAt  DateTime              @default(now())
+
+  lead Lead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([receivedAt])
+  @@index([leadId])
+  @@map("whatsapp_inbounds")
 }
 
 // ============================================
