@@ -117,9 +117,15 @@ https://app.scioti.tech/api/whatsapp/webhook
 
 | Item | Onde |
 |---|---|
-| Token de verificação | `WHATSAPP_VERIFY_TOKEN` no `.env.vps` (o mesmo da Vercel) |
+| Token de verificação | `WHATSAPP_VERIFY_TOKEN` no `.env.vps` — mesmo valor usado no painel da Meta |
 | Assinatura | `WHATSAPP_APP_SECRET` — **ainda não cadastrado** (enquanto não houver, o POST responde 503) |
 | Análise por IA | `LLM_API_KEY` — **ainda não cadastrado** (a análise roda só por regras) |
+
+> Abrir a URL do webhook no navegador, sem os parâmetros da Meta, responde
+> `403 Forbidden` — é o comportamento correto (a rota só aceita o desafio com
+> `hub.mode=subscribe` + token + challenge). Para testar:
+> `curl "https://app.scioti.tech/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=<token>&hub.challenge=12345"`
+> → `200` com o corpo `12345`.
 
 O passo a passo para criar a conta na Meta está em `GUIA_WHATSAPP_META.md`.
 Depois de cadastrar uma variável nova na Vercel **e** na VPS, lembre-se: variável de ambiente
