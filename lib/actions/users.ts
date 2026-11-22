@@ -126,6 +126,40 @@ export async function updateUserAction(
     const before = await prisma.user.findUnique({ where: { id } });
     if (!before) return { ok: false, error: "Usuário não encontrado." };
 
+    // Conta protegida (acesso do dono do sistema): fica fora da lista e
+    // não aceita mudança de perfil nem de situação.
+    if (
+      before.protectedAccount &&
+      (parsed.data.role !== before.role || parsed.data.status !== before.status)
+    ) {
+      return {
+        ok: false,
+        error: "Esta conta é protegida: o perfil e a situação não podem ser alterados.",
+      };
+    }
+
+    // Não é possível mexer no perfil nem desativar a própria conta: é o
+    // acesso de quem está operando — uma troca de senha/perfil errada
+    // deixaria o sistema sem administrador.
+    if (id === adminId && (parsed.data.role !== before.role || parsed.data.status !== before.status)) {
+      return {
+        ok: false,
+        error: "Você não pode alterar o perfil ou a situação da própria conta.",
+      };
+    }
+
+    // Não pode ficar sem administrador ativo no sistema.
+    const perdeAdmin =
+      before.role === "ADMIN" &&
+      before.status === "ATIVO" &&
+      (parsed.data.role !== "ADMIN" || parsed.data.status !== "ATIVO");
+    if (perdeAdmin && !(await existeOutroAdminAtivo(id))) {
+      return {
+        ok: false,
+        error: "Não é possível deixar o sistema sem nenhum administrador ativo.",
+      };
+    }
+
     const user = await prisma.user.update({
       where: { id },
       data: {
@@ -166,26 +200,67 @@ export async function updateUserAction(
   }
 }
 
-export async function toggleUserStatusAction(id: string): Promise<void> {
-  const adminId = await requireAdmin();
-  const user = await prisma.user.findUnique({ where: { id } });
-  if (!user) return;
-
-  const newStatus = user.status === "ATIVO" ? "INATIVO" : "ATIVO";
-  await prisma.user.update({
-    where: { id },
-    data: { status: newStatus },
+/** Existe outro administrador ativo além deste? */
+async function existeOutroAdminAtivo(ignorarId: string): Promise<boolean> {
+  const outro = await prisma.user.findFirst({
+    where: { role: "ADMIN", status: "ATIVO", NOT: { id: ignorarId } },
+    select: { id: true },
   });
+  return !!outro;
+}
 
-  await prisma.enrollmentAudit.create({
-    data: {
-      action: newStatus === "INATIVO" ? "USER_DEACTIVATED" : "USER_UPDATED",
-      actorId: adminId,
-      targetType: "User",
-      targetId: id,
-      details: user.name,
-    },
-  });
+export async function toggleUserStatusAction(
+  id: string
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const adminId = await requireAdmin();
 
-  revalidatePath("/admin/usuarios");
+    // A própria conta não pode ser desativada por engano.
+    if (id === adminId) {
+      return { ok: false, error: "Você não pode desativar a própria conta." };
+    }
+
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) return { ok: false, error: "Usuário não encontrado." };
+
+    // Conta protegida: nunca pode ser desativada nem reativada por engano.
+    if (user.protectedAccount) {
+      return {
+        ok: false,
+        error: "Esta conta é protegida e não pode ter a situação alterada.",
+      };
+    }
+
+    const newStatus = user.status === "ATIVO" ? "INATIVO" : "ATIVO";
+
+    // O sistema não pode ficar sem nenhum administrador ativo.
+    if (newStatus === "INATIVO" && user.role === "ADMIN") {
+      if (!(await existeOutroAdminAtivo(id))) {
+        return {
+          ok: false,
+          error: "Não é possível deixar o sistema sem nenhum administrador ativo.",
+        };
+      }
+    }
+
+    await prisma.user.update({
+      where: { id },
+      data: { status: newStatus },
+    });
+
+    await prisma.enrollmentAudit.create({
+      data: {
+        action: newStatus === "INATIVO" ? "USER_DEACTIVATED" : "USER_UPDATED",
+        actorId: adminId,
+        targetType: "User",
+        targetId: id,
+        details: user.name,
+      },
+    });
+
+    revalidatePath("/admin/usuarios");
+    return { ok: true };
+  } catch (e: any) {
+    return { ok: false, error: String(e?.message || e) };
+  }
 }

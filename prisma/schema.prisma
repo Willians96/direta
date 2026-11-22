@@ -37,6 +37,11 @@ model User {
   status        UserStatus @default(ATIVO)
   phone         String?
   avatarUrl     String?
+
+  // Conta protegida: não aparece na lista de usuários e não pode ser
+  // desativada nem rebaixada de perfil — protege o acesso do dono do
+  // sistema contra exclusões acidentais.
+  protectedAccount Boolean @default(false)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
   lastLoginAt   DateTime?

@@ -20,8 +20,8 @@ import { PageHeader } from "@/components/shared/page-header";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { formatDate, formatPhone } from "@/lib/utils";
-import { toggleUserStatusAction } from "@/lib/actions/users";
 import { UserFormDialog } from "./user-form-dialog";
+import { UserStatusToggle } from "@/components/shared/users/user-status-toggle";
 
 export const dynamic = "force-dynamic";
 
@@ -45,13 +45,18 @@ export default async function AdminUsuariosPage() {
     redirect("/");
   }
 
-  const [users, totalAtivos, totalInativos] = await Promise.all([
-    prisma.user.findMany({
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.user.count({ where: { status: "ATIVO" } }),
-    prisma.user.count({ where: { status: "INATIVO" } }),
-  ]);
+  const meuId = (session?.user as any)?.id as string;
+
+  const todosUsuarios = await prisma.user.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+
+  // Fora da lista ficam duas contas: a de quem está logado (é o acesso de
+  // quem opera o sistema) e as contas protegidas (o dono do sistema).
+  // Nenhuma das duas pode ser desativada ou rebaixada por engano.
+  const users = todosUsuarios.filter((u) => u.id !== meuId && !u.protectedAccount);
+  const totalAtivos = users.filter((u) => u.status === "ATIVO").length;
+  const totalInativos = users.filter((u) => u.status === "INATIVO").length;
 
   return (
     <div>
@@ -100,7 +105,12 @@ export default async function AdminUsuariosPage() {
         {/* Tabela */}
         <Card>
           <CardHeader>
-            <CardTitle>Lista de usuários</CardTitle>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>Lista de usuários</CardTitle>
+              <p className="text-xs text-slate-500">
+                A sua própria conta e as contas protegidas não aparecem na lista.
+              </p>
+            </div>
           </CardHeader>
           <CardContent>
             <Table>
@@ -157,25 +167,11 @@ export default async function AdminUsuariosPage() {
                               status: u.status,
                             }}
                           />
-                          <form
-                            action={async () => {
-                              "use server";
-                              await toggleUserStatusAction(u.id);
-                            }}
-                          >
-                            <Button
-                              type="submit"
-                              variant="ghost"
-                              size="sm"
-                              title={
-                                u.status === "ATIVO"
-                                  ? "Desativar usuário"
-                                  : "Reativar usuário"
-                              }
-                            >
-                              {u.status === "ATIVO" ? "⏸" : "▶"}
-                            </Button>
-                          </form>
+                          <UserStatusToggle
+                            id={u.id}
+                            nome={u.name}
+                            status={u.status}
+                          />
                         </div>
                       </TableCell>
                     </TableRow>
