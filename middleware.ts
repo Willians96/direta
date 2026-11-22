@@ -26,6 +26,9 @@ export default auth((req) => {
     pathname === "/login" ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/health") ||
+    // Webhook da Meta: a chamada não tem sessão (vem do WhatsApp), e a rota
+    // faz a própria autenticação (verify token + assinatura HMAC).
+    pathname.startsWith("/api/whatsapp") ||
     pathname === "/" ||
     STATIC_FILE.test(pathname);
 
@@ -55,6 +58,6 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
-    "/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpe?g|gif|webp|svg|ico|bmp|woff2?|ttf|eot|css|js|map)$).*)",
+    "/((?!api/auth|api/whatsapp|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpe?g|gif|webp|svg|ico|bmp|woff2?|ttf|eot|css|js|map)$).*)",
   ],
 };
