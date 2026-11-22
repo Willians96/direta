@@ -184,7 +184,7 @@ function LoginForm() {
               🔐 Acesso de demonstração:
             </div>
             <ul className="space-y-0.5 break-all font-mono text-[11px] sm:text-xs">
-              <li>admin@direta.com · admin123</li>
+              <li>ana@direta.com · ana@direta</li>
               <li>captacao@direta.com · captacao123</li>
               <li>vendas@direta.com · vendas123</li>
               <li>recepcao@direta.com · recepcao123</li>

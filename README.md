@@ -50,7 +50,7 @@ pnpm dev
 
 | Perfil | E-mail | Senha |
 |---|---|---|
-| **Administrador** | admin@direta.com | admin123 |
+| **Administrador** | ana@direta.com | ana@direta |
 | **Captação** | captacao@direta.com | captacao123 |
 | **Vendas** | vendas@direta.com | vendas123 |
 | **Recepção** | recepcao@direta.com | recepcao123 |
