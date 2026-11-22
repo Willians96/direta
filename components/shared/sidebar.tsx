@@ -22,6 +22,7 @@ import {
   X,
   BarChart3,
   UsersRound,
+  Plug,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/shared/logo";
@@ -45,6 +46,7 @@ const NAV_ITEMS: NavItem[] = [
   { title: "Alertas", href: "/admin/alertas", icon: AlertTriangle, roles: ["ADMIN", "CAPTACAO"] },
   { title: "Conversas", href: "/admin/conversas", icon: MessageCircle, roles: ["ADMIN", "CAPTACAO"] },
   { title: "Auditoria", href: "/admin/auditoria", icon: ScrollText, roles: ["ADMIN"] },
+  { title: "Integrações", href: "/admin/integracoes", icon: Plug, roles: ["ADMIN"] },
 
   // Captação
   { title: "Dashboard", href: "/captacao", icon: LayoutDashboard, roles: ["ADMIN", "CAPTACAO"] },

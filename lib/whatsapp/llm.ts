@@ -1,8 +1,9 @@
 /**
  * Análise por IA da mensagem recebida no WhatsApp.
  *
- * Usa a API compatível com Anthropic (protocolo `messages`), configurada por
- * variáveis de ambiente:
+ * Usa a API compatível com Anthropic (protocolo `messages`), configurada em
+ * Administração > Integrações (painel) ou, como reserva, por variáveis de
+ * ambiente:
  *
  *   LLM_API_KEY   — chave do provedor (obrigatória; sem ela o sistema cai
  *                   automaticamente para a análise por REGRAS)
@@ -14,6 +15,7 @@
  */
 
 import { SalesStatus } from "@prisma/client";
+import { configuracaoIA } from "@/lib/integrations";
 import type { CursoParaAnalise } from "./rules";
 
 export type AnaliseIA = {
@@ -52,15 +54,17 @@ const STATUS_VALIDOS: SalesStatus[] = [
   "VISITA",
 ];
 
-export function iaConfigurada() {
-  return !!process.env.LLM_API_KEY;
+export async function iaConfigurada() {
+  const cfg = await configuracaoIA();
+  return cfg.configurada;
 }
 
-/** Situação da IA no ambiente — usado na tela para avisar o time. */
-export function statusIA() {
+/** Situação da IA — usado na tela para avisar o time. */
+export async function statusIA() {
+  const cfg = await configuracaoIA();
   return {
-    configurada: iaConfigurada(),
-    modelo: process.env.LLM_MODEL || MODELO_PADRAO,
+    configurada: cfg.configurada,
+    modelo: cfg.model || MODELO_PADRAO,
   };
 }
 
@@ -141,13 +145,14 @@ export async function analisarComIA(opts: {
   cursos: CursoParaAnalise[];
   timeoutMs?: number;
 }): Promise<ResultadoIA> {
-  const apiKey = process.env.LLM_API_KEY;
+  const cfg = await configuracaoIA();
+  const apiKey = cfg.apiKey;
   if (!apiKey) {
-    return { ok: false, erro: "LLM_API_KEY não configurada" };
+    return { ok: false, erro: "Chave da IA não configurada (Administração > Integrações)" };
   }
 
-  const baseUrl = (process.env.LLM_BASE_URL || BASE_PADRAO).replace(/\/+$/, "");
-  const model = process.env.LLM_MODEL || MODELO_PADRAO;
+  const baseUrl = (cfg.baseUrl || BASE_PADRAO).replace(/\/+$/, "");
+  const model = cfg.model || MODELO_PADRAO;
   const timeoutMs = opts.timeoutMs ?? TIMEOUT_PADRAO;
 
   const controller = new AbortController();

@@ -41,7 +41,7 @@ export async function analisarMensagem(opts: {
     erroIA: null,
   };
 
-  if (!iaConfigurada()) return somenteRegras;
+  if (!(await iaConfigurada())) return somenteRegras;
 
   const ia = await analisarComIA({
     mensagem: opts.mensagem,

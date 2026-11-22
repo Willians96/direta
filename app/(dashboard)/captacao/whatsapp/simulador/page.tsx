@@ -63,7 +63,7 @@ const CENARIOS: Cenario[] = [
 ];
 
 export default async function SimuladorWhatsAppPage() {
-  const ia = statusIA();
+  const ia = await statusIA();
 
   return (
     <div>
@@ -109,9 +109,9 @@ export default async function SimuladorWhatsAppPage() {
               </p>
             ) : (
               <p>
-                Análise por IA <span className="font-medium text-amber-700">desligada</span> — sem{" "}
-                <code className="rounded bg-slate-100 px-1">LLM_API_KEY</code> no ambiente, a
-                qualificação usa apenas as regras. O lead é criado do mesmo jeito.
+                Análise por IA <span className="font-medium text-amber-700">desligada</span> — sem
+                chave de IA cadastrada (Administração &gt; Integrações), a qualificação usa apenas
+                as regras. O lead é criado do mesmo jeito.
               </p>
             )}
           </CardContent>

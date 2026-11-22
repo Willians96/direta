@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { processarMensagemWhatsApp } from "@/lib/whatsapp/ingest";
 import { extrairConteudo } from "@/lib/whatsapp/normalize";
+import { CHAVES, obterValor } from "@/lib/integrations";
 
 /**
  * Webhook da Meta (WhatsApp Cloud API).
@@ -37,7 +38,7 @@ export async function GET(req: NextRequest) {
   const token = params.get("hub.verify_token");
   const desafio = params.get("hub.challenge");
 
-  const tokenEsperado = process.env.WHATSAPP_VERIFY_TOKEN;
+  const tokenEsperado = await obterValor(CHAVES.WHATSAPP_VERIFY_TOKEN);
 
   if (modo === "subscribe" && token && token === tokenEsperado && desafio) {
     return new NextResponse(desafio, { status: 200 });
@@ -55,10 +56,10 @@ export async function GET(req: NextRequest) {
         "",
         "/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=<token>&hub.challenge=<numero>",
         "",
-        "O token de verificação é o valor da variável WHATSAPP_VERIFY_TOKEN",
-        "cadastrada no servidor. O POST (mensagens recebidas) só é aceito com",
-        "a assinatura HMAC (X-Hub-Signature-256) e exige a variável",
-        "WHATSAPP_APP_SECRET configurada.",
+        "O token de verificação é o cadastrado em Administração > Integrações",
+        "(também aceito da variável de ambiente do servidor). O POST",
+        "(mensagens recebidas) só é aceito com a assinatura HMAC",
+        "(X-Hub-Signature-256), que exige o App Secret configurado.",
       ].join("\n"),
       { status: 200, headers: { "Content-Type": "text/plain; charset=utf-8" } }
     );
@@ -72,7 +73,7 @@ export async function GET(req: NextRequest) {
 /** POST — mensagens recebidas. */
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
-  const secret = process.env.WHATSAPP_APP_SECRET;
+  const secret = await obterValor(CHAVES.WHATSAPP_APP_SECRET);
 
   if (secret) {
     const ok = temAssinaturaValida(rawBody, req.headers.get("x-hub-signature-256"), secret);
@@ -83,7 +84,10 @@ export async function POST(req: NextRequest) {
     // Sem o app secret a rota fica aberta para qualquer um — não é aceitável
     // em produção. Em desenvolvimento seguimos para facilitar os testes.
     return NextResponse.json(
-      { erro: "WHATSAPP_APP_SECRET não configurado" },
+      {
+        erro:
+          "App Secret do WhatsApp não configurado — cadastre em Administração > Integrações",
+      },
       { status: 503 }
     );
   }

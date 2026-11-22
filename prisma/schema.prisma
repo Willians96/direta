@@ -720,3 +720,24 @@ model EnrollmentAudit {
   @@index([targetType, targetId])
   @@map("enrollment_audits")
 }
+
+// ============================================
+// INTEGRAÇÕES
+// ============================================
+// Credenciais das integrações externas (Meta/WhatsApp, provedor de IA).
+//
+// O cliente configura isso pelo painel (Administração > Integrações) e o
+// valor passa a valer na hora, sem novo deploy. Segredos (App Secret,
+// token de acesso, chave da IA) são gravados CRIPTOGRAFADOS; o valor
+// criptografado é derivado do AUTH_SECRET do servidor.
+
+model IntegrationSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String   @db.Text
+  encrypted Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  @@map("integration_settings")
+}

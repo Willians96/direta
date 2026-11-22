@@ -1,14 +1,17 @@
 import Link from "next/link";
-import { MessageCircle, Plus, FlaskConical, Radio } from "lucide-react";
+import { MessageCircle, Plus, FlaskConical, Radio, Plug } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/shared/page-header";
 import { WhatsappQueueRow, type LinhaWhatsApp } from "@/components/shared/whatsapp/whatsapp-queue-row";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 import { statusIA } from "@/lib/whatsapp/llm";
+import { CHAVES, statusIntegracoes } from "@/lib/integrations";
 import { formatDateTime } from "@/lib/utils";
 
 /**
@@ -104,7 +107,10 @@ export default async function FilaWhatsAppPage({
           ? itens.filter((i) => i.status === "IGNORADA")
           : itens;
 
-  const ia = statusIA();
+  const ia = await statusIA();
+  const [sessao, statusConexao] = await Promise.all([auth(), statusIntegracoes()]);
+  const ehAdmin = (sessao?.user as any)?.role === "ADMIN";
+  const assinaturaAtiva = statusConexao[CHAVES.WHATSAPP_APP_SECRET].configurada;
 
   return (
     <div>
@@ -171,9 +177,18 @@ export default async function FilaWhatsAppPage({
         {!ia.configurada && (
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
             <span className="font-medium">Análise por IA desligada.</span> As mensagens estão
-            sendo qualificadas só por regras. Para ativar a IA, cadastre a chave{" "}
-            <code className="rounded bg-white px-1">LLM_API_KEY</code> nas variáveis de ambiente
-            do servidor e publique uma nova versão.
+            sendo qualificadas só por regras.{" "}
+            {ehAdmin ? (
+              <>
+                Cadastre a chave em{" "}
+                <Link href="/admin/integracoes" className="underline">
+                  Administração &gt; Integrações
+                </Link>{" "}
+                — passa a valer na hora.
+              </>
+            ) : (
+              "Peça ao administrador para cadastrar a chave em Administração > Integrações."
+            )}
           </div>
         )}
 
@@ -218,29 +233,48 @@ export default async function FilaWhatsAppPage({
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Como este módulo se conecta</CardTitle>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle className="text-base">Estado da conexão</CardTitle>
+              {assinaturaAtiva ? (
+                <Badge variant="success">Assinatura ativa</Badge>
+              ) : (
+                <Badge variant="warning">App Secret pendente</Badge>
+              )}
+            </div>
             <CardDescription>
               A Meta envia as mensagens para este endereço. Cada mensagem recebida gera um lead,
               uma análise e uma mensagem no chat-log.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm text-slate-600">
+          <CardContent className="space-y-3 text-sm text-slate-600">
             <div>
               <span className="font-medium text-slate-700">Webhook:</span>{" "}
               <code className="rounded bg-slate-100 px-1">/api/whatsapp/webhook</code>
             </div>
             <div>
               <span className="font-medium text-slate-700">Verificação:</span> o token do painel da
-              Meta (hub.verify_token) precisa ser igual a{" "}
-              <code className="rounded bg-slate-100 px-1">WHATSAPP_VERIFY_TOKEN</code>.
+              Meta (hub.verify_token) precisa ser igual ao token de verificação cadastrado no
+              sistema.
             </div>
             <div>
-              <span className="font-medium text-slate-700">Segurança:</span> com{" "}
-              <code className="rounded bg-slate-100 px-1">WHATSAPP_APP_SECRET</code> configurado, o
-              webhook exige a assinatura{" "}
-              <code className="rounded bg-slate-100 px-1">X-Hub-Signature-256</code> — sem isso
-              qualquer um conseguiria criar leads falsos.
+              <span className="font-medium text-slate-700">Segurança:</span>{" "}
+              {assinaturaAtiva
+                ? "o webhook exige a assinatura X-Hub-Signature-256 — sem isso, qualquer um criaria leads falsos."
+                : "sem o App Secret o webhook recusa as mensagens (503). Cadastre-o em Integrações para liberar o recebimento real."}
             </div>
+            <div>
+              <span className="font-medium text-slate-700">Análise por IA:</span>{" "}
+              {ia.configurada ? `ligada (${ia.modelo}).` : "desligada — só regras."}
+            </div>
+
+            {ehAdmin && (
+              <Button variant="outline" size="sm" asChild className="mt-1">
+                <Link href="/admin/integracoes">
+                  <Plug className="mr-2 h-4 w-4" />
+                  Configurar conexão
+                </Link>
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>
