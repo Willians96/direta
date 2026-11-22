@@ -35,9 +35,13 @@ echo "    commit: $(git rev-parse --short HEAD)"
 
 log "build da imagem"
 # O target `migrate` (imagem gescola-app:builder) precisa ser reconstruido
-# JUNTO com o app: sem isso o `run --rm migrate` reaproveita uma imagem antiga
-# e nao enxerga as migrations novas (o schema do Prisma ja vem no codigo).
-$COMPOSE build app migrate
+# JUNTO com o app. Dois detalhes:
+#   1. sem isso o `run --rm migrate` reaproveita uma imagem antiga e nao
+#      enxerga as migrations novas (o schema do Prisma ja vem no codigo);
+#   2. o servico `migrate` esta no profile "tools" — sem `--profile tools` o
+#      compose ignora o servico e nao constroi nada.
+$COMPOSE build app
+$COMPOSE --profile tools build migrate
 
 log "migrations do Prisma"
 $COMPOSE run --rm migrate
