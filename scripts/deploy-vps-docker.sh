@@ -34,7 +34,10 @@ git pull --ff-only origin main
 echo "    commit: $(git rev-parse --short HEAD)"
 
 log "build da imagem"
-$COMPOSE build app
+# O target `migrate` (imagem gescola-app:builder) precisa ser reconstruido
+# JUNTO com o app: sem isso o `run --rm migrate` reaproveita uma imagem antiga
+# e nao enxerga as migrations novas (o schema do Prisma ja vem no codigo).
+$COMPOSE build app migrate
 
 log "migrations do Prisma"
 $COMPOSE run --rm migrate
