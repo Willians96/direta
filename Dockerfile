@@ -41,8 +41,9 @@ ENV NODE_ENV=production
 CMD ["pnpm", "prisma", "migrate", "deploy"]
 
 # ---------- Stage 4: runtime ----------
+# libc6-compat: o sharp (otimizacao de imagem) precisa das libs de compatibilidade no alpine.
 FROM node:22-alpine AS runner
-RUN apk add --no-cache openssl curl
+RUN apk add --no-cache openssl curl libc6-compat
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
