@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE "users" ADD COLUMN "protected_account" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "users" ADD COLUMN "protectedAccount" BOOLEAN NOT NULL DEFAULT false;
