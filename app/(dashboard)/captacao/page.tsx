@@ -292,6 +292,14 @@ export default async function CaptacaoDashboardPage({
   const contagemStatus = (vendedor: string, status: SalesStatus) =>
     statusPorVendedor.get(`${vendedor}|${status}`) ?? 0;
 
+  // Colunas da matriz: vendedores + uma coluna para os leads sem vendedor
+  // (quando existem), para que o TOTAL feche com a soma das colunas.
+  const leadsSemVendedor = leadsPipeline.filter((l) => !l.assignedToId).length;
+  const colunasMatriz: { id: string; nome: string }[] = [
+    ...vendedores.map((v) => ({ id: v.id, nome: v.name })),
+    ...(leadsSemVendedor > 0 ? [{ id: "__sem__", nome: "SEM VENDEDOR" }] : []),
+  ];
+
   // Matrículas por vendedor (acumulado do sistema)
   const matrPorVendedor = new Map<string, number>();
   for (const m of matriculas) {
@@ -675,9 +683,9 @@ export default async function CaptacaoDashboardPage({
                 <thead>
                   <tr className="border-b bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
                     <th className="px-3 py-3">Status de vendas</th>
-                    {vendedores.map((v) => (
-                      <th key={v.id} className="px-3 py-3 text-center">
-                        {v.name}
+                    {colunasMatriz.map((c) => (
+                      <th key={c.id} className="px-3 py-3 text-center">
+                        {c.nome}
                       </th>
                     ))}
                     <th className="px-3 py-3 text-center">TOTAL</th>
@@ -687,20 +695,23 @@ export default async function CaptacaoDashboardPage({
                   {/* Total válido */}
                   <tr className="bg-slate-50/60 font-semibold">
                     <td className="px-3 py-2.5">TOTAL VÁLIDO</td>
-                    {vendedores.map((v) => (
-                      <td key={v.id} className="px-3 py-2.5 text-center">
-                        {totalPorVendedor.get(v.id) ?? 0}
+                    {colunasMatriz.map((c) => (
+                      <td key={c.id} className="px-3 py-2.5 text-center">
+                        {totalPorVendedor.get(c.id) ?? 0}
                       </td>
                     ))}
                     <td className="px-3 py-2.5 text-center">
-                      {leadsPipeline.length}
+                      {colunasMatriz.reduce(
+                        (acc, c) => acc + (totalPorVendedor.get(c.id) ?? 0),
+                        0
+                      )}
                     </td>
                   </tr>
 
                   {/* Linhas por status */}
                   {LINHAS_STATUS.map((linha) => {
-                    const totalLinha = vendedores.reduce(
-                      (acc, v) => acc + contagemStatus(v.id, linha.status),
+                    const totalLinha = colunasMatriz.reduce(
+                      (acc, c) => acc + contagemStatus(c.id, linha.status),
                       0
                     );
                     return (
@@ -708,9 +719,9 @@ export default async function CaptacaoDashboardPage({
                         <td className="whitespace-nowrap px-3 py-2 text-slate-600">
                           {linha.label}
                         </td>
-                        {vendedores.map((v) => (
-                          <td key={v.id} className="px-3 py-2 text-center">
-                            {contagemStatus(v.id, linha.status)}
+                        {colunasMatriz.map((c) => (
+                          <td key={c.id} className="px-3 py-2 text-center">
+                            {contagemStatus(c.id, linha.status)}
                           </td>
                         ))}
                         <td className="px-3 py-2 text-center font-medium">
@@ -723,28 +734,28 @@ export default async function CaptacaoDashboardPage({
                   {/* 4º CTT / INATIVO */}
                   <tr>
                     <td className="px-3 py-2 text-slate-600">4º CTT - ATIVOS</td>
-                    {vendedores.map((v) => (
-                      <td key={v.id} className="px-3 py-2 text-center">
-                        {quartoCttPorVendedor.get(v.id) ?? 0}
+                    {colunasMatriz.map((c) => (
+                      <td key={c.id} className="px-3 py-2 text-center">
+                        {quartoCttPorVendedor.get(c.id) ?? 0}
                       </td>
                     ))}
                     <td className="px-3 py-2 text-center font-medium">
-                      {vendedores.reduce(
-                        (acc, v) => acc + (quartoCttPorVendedor.get(v.id) ?? 0),
+                      {colunasMatriz.reduce(
+                        (acc, c) => acc + (quartoCttPorVendedor.get(c.id) ?? 0),
                         0
                       )}
                     </td>
                   </tr>
                   <tr>
                     <td className="px-3 py-2 text-slate-600">INATIVO GERAL</td>
-                    {vendedores.map((v) => (
-                      <td key={v.id} className="px-3 py-2 text-center">
-                        {inativosPorVendedor.get(v.id) ?? 0}
+                    {colunasMatriz.map((c) => (
+                      <td key={c.id} className="px-3 py-2 text-center">
+                        {inativosPorVendedor.get(c.id) ?? 0}
                       </td>
                     ))}
                     <td className="px-3 py-2 text-center font-medium">
-                      {vendedores.reduce(
-                        (acc, v) => acc + (inativosPorVendedor.get(v.id) ?? 0),
+                      {colunasMatriz.reduce(
+                        (acc, c) => acc + (inativosPorVendedor.get(c.id) ?? 0),
                         0
                       )}
                     </td>
@@ -755,9 +766,12 @@ export default async function CaptacaoDashboardPage({
                     <td className="px-3 py-2.5 font-semibold text-emerald-800">
                       MATR RANKING
                     </td>
-                    {vendedores.map((v) => (
-                      <td key={v.id} className="px-3 py-2.5 text-center font-semibold text-emerald-800">
-                        {matrPorVendedor.get(v.id) ?? 0}
+                    {colunasMatriz.map((c) => (
+                      <td
+                        key={c.id}
+                        className="px-3 py-2.5 text-center font-semibold text-emerald-800"
+                      >
+                        {matrPorVendedor.get(c.id) ?? 0}
                       </td>
                     ))}
                     <td className="px-3 py-2.5 text-center font-semibold text-emerald-800">
@@ -768,11 +782,14 @@ export default async function CaptacaoDashboardPage({
                     <td className="px-3 py-2.5 font-semibold text-emerald-800">
                       % FECHA
                     </td>
-                    {vendedores.map((v) => (
-                      <td key={v.id} className="px-3 py-2.5 text-center text-emerald-800">
+                    {colunasMatriz.map((c) => (
+                      <td
+                        key={c.id}
+                        className="px-3 py-2.5 text-center text-emerald-800"
+                      >
                         {pct(
-                          matrPorVendedor.get(v.id) ?? 0,
-                          totalPorVendedor.get(v.id) ?? 0
+                          matrPorVendedor.get(c.id) ?? 0,
+                          totalPorVendedor.get(c.id) ?? 0
                         )}
                       </td>
                     ))}
