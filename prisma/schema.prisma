@@ -42,6 +42,24 @@ model User {
   // desativada nem rebaixada de perfil — protege o acesso do dono do
   // sistema contra exclusões acidentais.
   protectedAccount Boolean @default(false)
+
+  // --- Cadastro de colaboradores (tela pedida pela cliente, com os campos
+  // do sistema antigo) ---
+  code            String?    @unique   // Código do colaborador
+  admissionDate   DateTime?             // Data de admissão
+  cpf             String?
+  rg              String?
+  birthDate       DateTime?
+  mobile          String?               // Celular
+  jobTitle        String?               // Cargo
+  addressStreet   String?
+  addressNumber   String?
+  addressDistrict String?               // Bairro
+  addressCity     String?
+  addressState    String?
+  addressZip      String?
+  notes           String?    @db.Text  // Observações
+  showEnrollment  Boolean    @default(true) // Aparece para efetuar matrícula
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
   lastLoginAt   DateTime?

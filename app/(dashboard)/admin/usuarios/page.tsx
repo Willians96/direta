@@ -116,11 +116,12 @@ export default async function AdminUsuariosPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Código</TableHead>
                   <TableHead>Nome</TableHead>
-                  <TableHead>E-mail</TableHead>
+                  <TableHead>Cargo</TableHead>
                   <TableHead>Perfil</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Contato</TableHead>
+                  <TableHead>Situação</TableHead>
                   <TableHead>Último login</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -128,29 +129,46 @@ export default async function AdminUsuariosPage() {
               <TableBody>
                 {users.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-slate-500">
+                    <TableCell colSpan={8} className="text-center text-slate-500">
                       Nenhum usuário cadastrado.
                     </TableCell>
                   </TableRow>
                 ) : (
                   users.map((u) => (
                     <TableRow key={u.id}>
+                      <TableCell className="text-slate-500 text-xs">{u.code ?? "—"}</TableCell>
                       <TableCell className="font-medium">{u.name}</TableCell>
-                      <TableCell className="text-slate-600">{u.email}</TableCell>
+                      <TableCell className="text-slate-600">
+                        {u.jobTitle ?? "—"}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={ROLE_VARIANTS[u.role]}>
                           {ROLE_LABELS[u.role]}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-slate-600">
-                        {u.phone ? formatPhone(u.phone) : "—"}
+                        <div>{u.email}</div>
+                        <div className="text-xs text-slate-400">
+                          {u.mobile
+                            ? formatPhone(u.mobile)
+                            : u.phone
+                              ? formatPhone(u.phone)
+                              : ""}
+                        </div>
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant={u.status === "ATIVO" ? "success" : "neutral"}
-                        >
-                          {u.status === "ATIVO" ? "Ativo" : "Inativo"}
-                        </Badge>
+                        <div className="flex flex-col gap-1">
+                          <Badge
+                            variant={u.status === "ATIVO" ? "success" : "neutral"}
+                          >
+                            {u.status === "ATIVO" ? "Ativo" : "Inativo"}
+                          </Badge>
+                          {!u.showEnrollment && (
+                            <Badge variant="neutral" className="w-fit">
+                              Sem matrícula
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-slate-500 text-xs">
                         {u.lastLoginAt ? formatDate(u.lastLoginAt) : "Nunca"}
@@ -165,6 +183,23 @@ export default async function AdminUsuariosPage() {
                               role: u.role,
                               phone: u.phone,
                               status: u.status,
+                              code: u.code,
+                              admissionDate: u.admissionDate?.toISOString() ?? null,
+                              birthDate: u.birthDate?.toISOString() ?? null,
+                              cpf: u.cpf,
+                              rg: u.rg,
+                              mobile: u.mobile,
+                              jobTitle: u.jobTitle,
+                              addressStreet: u.addressStreet,
+                              addressNumber: u.addressNumber,
+                              addressDistrict: u.addressDistrict,
+                              addressCity: u.addressCity,
+                              addressState: u.addressState,
+                              addressZip: u.addressZip,
+                              notes: u.notes,
+                              showEnrollment: u.showEnrollment,
+                              avatarUrl: u.avatarUrl,
+                              createdAt: u.createdAt.toISOString(),
                             }}
                           />
                           <UserStatusToggle

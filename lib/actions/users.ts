@@ -7,12 +7,36 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
+/**
+ * Cadastro de colaboradores — tela pedida pela cliente com os campos do
+ * sistema antigo (código, admissão, documentos, endereço, cargo,
+ * observações e "aparecer para efetuar matrícula").
+ */
+const camposColaborador = {
+  code: z.string().max(30).optional().or(z.literal("")),
+  admissionDate: z.string().optional().or(z.literal("")),
+  birthDate: z.string().optional().or(z.literal("")),
+  cpf: z.string().max(20).optional().or(z.literal("")),
+  rg: z.string().max(20).optional().or(z.literal("")),
+  mobile: z.string().max(20).optional().or(z.literal("")),
+  jobTitle: z.string().max(80).optional().or(z.literal("")),
+  addressStreet: z.string().max(150).optional().or(z.literal("")),
+  addressNumber: z.string().max(20).optional().or(z.literal("")),
+  addressDistrict: z.string().max(80).optional().or(z.literal("")),
+  addressCity: z.string().max(80).optional().or(z.literal("")),
+  addressState: z.string().max(2).optional().or(z.literal("")),
+  addressZip: z.string().max(12).optional().or(z.literal("")),
+  notes: z.string().max(2000).optional().or(z.literal("")),
+  showEnrollment: z.boolean(),
+};
+
 const createUserSchema = z.object({
   fullName: z.string().min(3, "Nome obrigatório"),
   email: z.string().email("E-mail inválido"),
   password: z.string().min(6, "Mínimo 6 caracteres"),
   role: z.enum(["ADMIN", "CAPTACAO", "VENDAS", "RECEPCAO"]),
   phone: z.string().optional(),
+  ...camposColaborador,
 });
 
 const updateUserSchema = z.object({
@@ -21,7 +45,40 @@ const updateUserSchema = z.object({
   role: z.enum(["ADMIN", "CAPTACAO", "VENDAS", "RECEPCAO"]),
   phone: z.string().optional(),
   status: z.enum(["ATIVO", "INATIVO"]),
+  ...camposColaborador,
 });
+
+/** Lê os campos do colaborador do FormData e devolve o formato do Prisma. */
+function dadosColaborador(formData: FormData) {
+  const data = (campo: string) => {
+    const valor = ((formData.get(campo) as string) || "").trim();
+    return valor === "" ? null : valor;
+  };
+  const dataDate = (campo: string) => {
+    const valor = ((formData.get(campo) as string) || "").trim();
+    return valor ? new Date(valor) : null;
+  };
+
+  return {
+    code: data("code"),
+    admissionDate: dataDate("admissionDate"),
+    birthDate: dataDate("birthDate"),
+    cpf: data("cpf"),
+    rg: data("rg"),
+    mobile: data("mobile"),
+    jobTitle: data("jobTitle"),
+    addressStreet: data("addressStreet"),
+    addressNumber: data("addressNumber"),
+    addressDistrict: data("addressDistrict"),
+    addressCity: data("addressCity"),
+    addressState: data("addressState"),
+    addressZip: data("addressZip"),
+    notes: data("notes"),
+    showEnrollment:
+      formData.get("showEnrollment") === "on" ||
+      formData.get("showEnrollment") === "true",
+  };
+}
 
 export type ActionState = {
   ok: boolean;
@@ -52,6 +109,7 @@ export async function createUserAction(
       password: formData.get("password") as string,
       role: formData.get("role") as string,
       phone: (formData.get("phone") as string) || undefined,
+      ...dadosColaborador(formData),
     };
 
     const parsed = createUserSchema.safeParse(data);
@@ -69,6 +127,17 @@ export async function createUserAction(
       return { ok: false, error: "E-mail já cadastrado." };
     }
 
+    // O código do colaborador é único.
+    if (parsed.data.code) {
+      const outroComMesmoCodigo = await prisma.user.findUnique({
+        where: { code: parsed.data.code },
+        select: { id: true },
+      });
+      if (outroComMesmoCodigo) {
+        return { ok: false, error: "Já existe um colaborador com esse código." };
+      }
+    }
+
     const passwordHash = await bcrypt.hash(parsed.data.password, 10);
 
     const user = await prisma.user.create({
@@ -79,6 +148,25 @@ export async function createUserAction(
         role: parsed.data.role,
         phone: parsed.data.phone,
         status: "ATIVO",
+        code: parsed.data.code || null,
+        admissionDate: parsed.data.admissionDate
+          ? new Date(parsed.data.admissionDate)
+          : null,
+        birthDate: parsed.data.birthDate
+          ? new Date(parsed.data.birthDate)
+          : null,
+        cpf: parsed.data.cpf || null,
+        rg: parsed.data.rg || null,
+        mobile: parsed.data.mobile || null,
+        jobTitle: parsed.data.jobTitle || null,
+        addressStreet: parsed.data.addressStreet || null,
+        addressNumber: parsed.data.addressNumber || null,
+        addressDistrict: parsed.data.addressDistrict || null,
+        addressCity: parsed.data.addressCity || null,
+        addressState: parsed.data.addressState || null,
+        addressZip: parsed.data.addressZip || null,
+        notes: parsed.data.notes || null,
+        showEnrollment: parsed.data.showEnrollment,
       },
     });
 
@@ -113,6 +201,7 @@ export async function updateUserAction(
       role: formData.get("role") as string,
       phone: (formData.get("phone") as string) || undefined,
       status: formData.get("status") as string,
+      ...dadosColaborador(formData),
     };
 
     const parsed = updateUserSchema.safeParse(data);
@@ -160,6 +249,17 @@ export async function updateUserAction(
       };
     }
 
+    // O código do colaborador é único.
+    if (parsed.data.code) {
+      const outroComMesmoCodigo = await prisma.user.findUnique({
+        where: { code: parsed.data.code },
+        select: { id: true },
+      });
+      if (outroComMesmoCodigo && outroComMesmoCodigo.id !== id) {
+        return { ok: false, error: "Já existe um colaborador com esse código." };
+      }
+    }
+
     const user = await prisma.user.update({
       where: { id },
       data: {
@@ -168,6 +268,25 @@ export async function updateUserAction(
         role: parsed.data.role,
         phone: parsed.data.phone,
         status: parsed.data.status,
+        code: parsed.data.code || null,
+        admissionDate: parsed.data.admissionDate
+          ? new Date(parsed.data.admissionDate)
+          : null,
+        birthDate: parsed.data.birthDate
+          ? new Date(parsed.data.birthDate)
+          : null,
+        cpf: parsed.data.cpf || null,
+        rg: parsed.data.rg || null,
+        mobile: parsed.data.mobile || null,
+        jobTitle: parsed.data.jobTitle || null,
+        addressStreet: parsed.data.addressStreet || null,
+        addressNumber: parsed.data.addressNumber || null,
+        addressDistrict: parsed.data.addressDistrict || null,
+        addressCity: parsed.data.addressCity || null,
+        addressState: parsed.data.addressState || null,
+        addressZip: parsed.data.addressZip || null,
+        notes: parsed.data.notes || null,
+        showEnrollment: parsed.data.showEnrollment,
       },
     });
 
