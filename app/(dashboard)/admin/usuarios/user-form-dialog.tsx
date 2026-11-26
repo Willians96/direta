@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Camera, Loader2, Plus, Pencil, UserCog, MapPin, IdCard, Phone } from "lucide-react";
+import { Loader2, Plus, Pencil, UserCog, MapPin, IdCard, Phone } from "lucide-react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -410,8 +410,8 @@ export function UserFormDialog({ user }: UserFormDialogProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Foto</Label>
-                <div className="flex items-center gap-3">
+                <Label htmlFor="foto">Foto</Label>
+                <div className="flex items-start gap-3">
                   <div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center overflow-hidden rounded-md border bg-slate-50 text-[10px] text-slate-400">
                     {fotoPreview ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -431,34 +431,22 @@ export function UserFormDialog({ user }: UserFormDialogProps) {
                       "FOTO"
                     )}
                   </div>
-                  <div>
-                    <input
+                  <div className="flex-1 space-y-1">
+                    <Input
                       ref={inputFotoRef}
                       id="foto"
                       type="file"
                       accept="image/png,image/jpeg,image/webp,image/gif"
-                      className="hidden"
+                      disabled={enviandoFoto}
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) enviarFoto(file);
                       }}
                     />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={enviandoFoto}
-                      onClick={() => inputFotoRef.current?.click()}
-                    >
-                      {enviandoFoto ? (
-                        <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                      ) : (
-                        <Camera className="mr-2 h-3 w-3" />
-                      )}
-                      {user?.avatarUrl || fotoPreview ? "Trocar foto" : "Enviar foto"}
-                    </Button>
-                    <p className="mt-1 text-[11px] text-slate-400">
-                      JPG, PNG, WEBP ou GIF, até 3 MB.
+                    <p className="text-[11px] text-slate-400">
+                      {enviandoFoto
+                        ? "Enviando a foto..."
+                        : "JPG, PNG, WEBP ou GIF, até 3 MB."}
                     </p>
                   </div>
                 </div>
