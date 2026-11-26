@@ -108,10 +108,9 @@ export default async function NovoLeadPage() {
                 />
               </div>
 
-              <div>
-                <Label htmlFor="cpf">CPF</Label>
-                <Input id="cpf" name="cpf" placeholder="000.000.000-00" className="mt-1" />
-              </div>
+              {/* Sem CPF aqui de propósito: o documento do cliente é pedido
+                  só na matrícula. No primeiro contato o prospecto não
+                  informa esse dado. */}
 
               <div>
                 <Label htmlFor="email">E-mail</Label>

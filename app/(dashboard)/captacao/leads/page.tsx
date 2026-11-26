@@ -27,7 +27,7 @@ import { LeadStatus, LeadPriority, SalesStatus } from "@prisma/client";
  * Sprint 21 — Tela de Captação de Leads conforme pedido da cliente.
  *
  * Faixa de indicadores (resumo do mês atual):
- *   TOTAL | SEM CTT | NEGO | MATR | FECHA | INATIVO | MÉDIA | VISITA
+ *   TOTAL | SEM CTT | NEGO | MATR | INATIVO | MÉDIA | VISITA
  *
  * Tabela (na sequência pedida):
  *   DT CAD | NOME | TELEFONE | CURSO | STATUS | VENDE | ATUALIZADO
@@ -156,10 +156,7 @@ export default async function LeadsPage({
       prisma.followup.count({ where: { lead: { is: baseMes } } }),
     ]);
 
-  // FECHA %: leitura literal do pedido da cliente — "somar o total de
-  // clientes que entrou no mês, dividir pelas matrículas fechadas".
-  // Sem matrículas fechadas no mês não há divisão → mostra "—".
-  const fecha = matr > 0 ? (totalMes / matr) * 100 : null;
+  // A média de follow-ups por cliente do mês (usada no card "Média").
   const mediaFollowup = totalMes > 0 ? followupsDoMes / totalMes : 0;
 
   // ---------- Tabela: todos os leads cadastrados ----------
@@ -249,7 +246,7 @@ export default async function LeadsPage({
               {formatarDecimal(agora.getMonth() + 1, 0)}/{agora.getFullYear()}
             </span>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
             <KpiCard
               label="Total"
               value={totalMes}
@@ -276,13 +273,6 @@ export default async function LeadsPage({
               color="text-emerald-600"
               href={montarHref({ ...limparStatus, salesStatus: "MATRICULADO" })}
               ajuda="Status de matriculado"
-            />
-            <KpiCard
-              label="Fecha"
-              value={fecha === null ? "—" : `${formatarDecimal(fecha)}%`}
-              color="text-indigo-600"
-              href={montarHref({ ...limparStatus, salesStatus: "MATRICULADO" })}
-              ajuda="Total de clientes do mês ÷ matrículas fechadas"
             />
             <KpiCard
               label="Inativo"
