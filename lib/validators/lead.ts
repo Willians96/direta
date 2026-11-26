@@ -18,6 +18,7 @@ export const createLeadSchema = z.object({
   campaignId: z.string().cuid().optional().or(z.literal("")),
   assignedToId: z.string().cuid().optional().or(z.literal("")),
   source: z.string().max(80).optional().or(z.literal("")),
+  sourceId: z.string().cuid().optional().or(z.literal("")),
   priority: z.enum(["ALTA", "MEDIA", "BAIXA"]).default("MEDIA"),
   salesStatus: z
     .enum([

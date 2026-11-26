@@ -37,6 +37,16 @@ export async function createLeadAction(raw: CreateLeadInput) {
 
   const data = createLeadSchema.parse(raw);
 
+  // Fonte (forma de conhecimento): quando vem do cadastro de Fontes, o
+  // registro guarda o vínculo (sourceId) e o nome da forma (source).
+  const fonte = data.sourceId
+    ? await prisma.leadSource.findUnique({
+        where: { id: data.sourceId },
+        select: { id: true, description: true },
+      })
+    : null;
+  const fonteDescricao = fonte?.description ?? (data.source || null);
+
   const lead = await prisma.lead.create({
     data: {
       fullName: data.fullName,
@@ -48,7 +58,8 @@ export async function createLeadAction(raw: CreateLeadInput) {
       courseId: data.courseId || null,
       campaignId: data.campaignId || null,
       assignedToId: data.assignedToId || null,
-      source: data.source || null,
+      source: fonteDescricao,
+      sourceId: fonte?.id ?? null,
       priority: data.priority as LeadPriority,
       salesStatus: data.salesStatus as SalesStatus,
       notes: data.notes || null,
@@ -63,7 +74,7 @@ export async function createLeadAction(raw: CreateLeadInput) {
       actorId: actor.id,
       targetType: "Lead",
       targetId: lead.id,
-      details: `Lead criado — fonte: ${data.source || "não informada"}; Status do cliente: ${data.salesStatus}`,
+      details: `Lead criado — fonte: ${fonteDescricao || "não informada"}; Status do cliente: ${data.salesStatus}`,
     },
   });
 
@@ -198,6 +209,7 @@ export async function createLeadAndRedirect(formData: FormData) {
     courseId: (formData.get("courseId") as string) || "",
     campaignId: (formData.get("campaignId") as string) || "",
     assignedToId: (formData.get("assignedToId") as string) || "",
+    sourceId: (formData.get("sourceId") as string) || "",
     source: (formData.get("source") as string) || "",
     priority: (formData.get("priority") as string) || "MEDIA",
     salesStatus: (formData.get("salesStatus") as string) || "NEGOCIANDO",

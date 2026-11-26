@@ -30,21 +30,10 @@ import { SALES_STATUS_OPTIONS } from "@/components/shared/sales-status-badge";
 /**
  * Cadastro do Cliente — Sprint 14.
  * Inclui 3 telefones de contato e a "Fonte" (como o cliente conheceu a escola).
+ *
+ * A lista de fontes vem do cadastro de Formas de Conhecimento
+ * (Captação > Fontes) — somente as ativas.
  */
-
-const SOURCE_OPTIONS = [
-  "Instagram",
-  "Facebook",
-  "Google",
-  "WhatsApp",
-  "Indicação",
-  "Portão (indicação)",
-  "Evento",
-  "Outdoor",
-  "Escola / aluno",
-  "Site",
-  "Outro",
-];
 
 export default async function NovoLeadPage() {
   const session = await auth();
@@ -52,7 +41,7 @@ export default async function NovoLeadPage() {
   const role = (session.user as any).role as string;
   if (role === "RECEPCAO") redirect("/recepcao");
 
-  const [courses, campaigns, vendedores] = await Promise.all([
+  const [courses, campaigns, vendedores, fontes] = await Promise.all([
     prisma.course.findMany({
       where: { status: "ATIVO" },
       select: { id: true, name: true },
@@ -67,6 +56,11 @@ export default async function NovoLeadPage() {
       where: { role: "VENDAS", status: "ATIVO" },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
+    }),
+    prisma.leadSource.findMany({
+      where: { active: true },
+      select: { id: true, description: true },
+      orderBy: { description: "asc" },
     }),
   ]);
 
@@ -172,21 +166,21 @@ export default async function NovoLeadPage() {
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
               <div>
-                <Label htmlFor="source">Fonte (como conheceu a escola)</Label>
+                <Label htmlFor="sourceId">Fonte (como conheceu a escola)</Label>
                 <select
-                  id="source"
-                  name="source"
+                  id="sourceId"
+                  name="sourceId"
                   className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
                 >
                   <option value="">Selecione...</option>
-                  {SOURCE_OPTIONS.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
+                  {fontes.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.description}
                     </option>
                   ))}
                 </select>
                 <p className="mt-1 text-[10px] text-slate-500">
-                  Se a opção for &quot;Outro&quot;, informe a origem nas observações.
+                  Formas de conhecimento cadastradas em Captação &gt; Fontes.
                 </p>
               </div>
 

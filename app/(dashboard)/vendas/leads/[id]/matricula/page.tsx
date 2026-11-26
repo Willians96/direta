@@ -11,6 +11,7 @@ import {
   MapPin,
   User,
   Calendar,
+  Share2,
 } from "lucide-react";
 import {
   Card,
@@ -193,6 +194,8 @@ function EnrollmentForm({
           addressCity: (formData.get("addressCity") as string) || "",
           addressState: (formData.get("addressState") as string) || "",
           addressZip: (formData.get("addressZip") as string) || "",
+          socialNetwork: (formData.get("socialNetwork") as string) || "",
+          company: (formData.get("company") as string) || "",
           paymentMethod: ((formData.get("paymentMethod") as string) ||
             "") as PaymentMethod | "",
           paymentDetails: (formData.get("paymentDetails") as string) || "",
@@ -351,6 +354,40 @@ function EnrollmentForm({
           <div>
             <Label htmlFor="addressZip">CEP</Label>
             <Input id="addressZip" name="addressZip" placeholder="00000-000" className="mt-1" />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Origem da matrícula — rede social e empresa */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Share2 className="h-4 w-4 text-direta-orange" />
+            Origem do aluno
+          </CardTitle>
+          <CardDescription>
+            Preencha quando o aluno veio por rede social (perfil/seguidores) ou veio indicado
+            por uma empresa. Esses dados alimentam o painel de Captação.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <div>
+            <Label htmlFor="socialNetwork">Rede social (perfil / @)</Label>
+            <Input
+              id="socialNetwork"
+              name="socialNetwork"
+              placeholder="Ex: Instagram @direta.cursos"
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label htmlFor="company">Empresa (indicação)</Label>
+            <Input
+              id="company"
+              name="company"
+              placeholder="Ex: Empresa X — RH"
+              className="mt-1"
+            />
           </div>
         </CardContent>
       </Card>

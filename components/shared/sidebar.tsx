@@ -23,6 +23,7 @@ import {
   BarChart3,
   UsersRound,
   Plug,
+  Waypoints,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/shared/logo";
@@ -51,6 +52,7 @@ const NAV_ITEMS: NavItem[] = [
   // Captação
   { title: "Dashboard", href: "/captacao", icon: LayoutDashboard, roles: ["ADMIN", "CAPTACAO"] },
   { title: "Leads", href: "/captacao/leads", icon: UserPlus, roles: ["ADMIN", "CAPTACAO"] },
+  { title: "Fontes", href: "/captacao/fontes", icon: Waypoints, roles: ["ADMIN", "CAPTACAO"] },
   { title: "Campanhas", href: "/captacao/campanhas", icon: Megaphone, roles: ["ADMIN", "CAPTACAO"] },
   { title: "WhatsApp", href: "/captacao/whatsapp", icon: MessageSquare, roles: ["ADMIN", "CAPTACAO"] },
 

@@ -288,6 +288,27 @@ model Campaign {
 }
 
 // ============================================
+// FORMAS DE CONHECIMENTO (FONTES)
+// ============================================
+// Cadastro oficial de "como o cliente conheceu a escola".
+// Alimenta o select de Fonte do cadastro de lead e o painel de Captação
+// (bloco FONTE / CONHECIMENTO). Tela pedida pela cliente: Descrição,
+// "Não gerar comissão" e Situação (Ativo / Inativo).
+
+model LeadSource {
+  id           String   @id @default(cuid())
+  description  String   @unique
+  noCommission Boolean  @default(false) // "Não gerar comissão"
+  active       Boolean  @default(true)  // Situação: Ativo / Inativo
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  leads Lead[]
+
+  @@map("lead_sources")
+}
+
+// ============================================
 // LEADS (núcleo do funil)
 // ============================================
 
@@ -344,7 +365,8 @@ model Lead {
   phone2       String?       // 2º telefone de contato
   phone3       String?       // 3º telefone de contato
   cpf          String?
-  source       String?       // como o cliente conheceu a escola ("fonte")
+  source       String?       // como o cliente conheceu a escola ("fonte") — nome da Fonte
+  sourceId     String?       // vínculo com o cadastro de Formas de Conhecimento
   status       LeadStatus   @default(NOVO)
   salesStatus  SalesStatus  @default(NEGOCIANDO) // classificação do vendedor
   priority     LeadPriority @default(MEDIA)
@@ -377,6 +399,7 @@ model Lead {
   assignedTo   User?           @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
   createdBy    User            @relation("LeadCreator", fields: [createdById], references: [id])
   aiCourse     Course?         @relation("LeadAiCourse", fields: [aiCourseId], references: [id])
+  leadSource   LeadSource?     @relation(fields: [sourceId], references: [id], onDelete: SetNull)
   interactions Interaction[]
   followups    Followup[]
   messages     LeadMessage[]
@@ -665,6 +688,9 @@ model Enrollment {
   addressCity       String?
   addressState      String?
   addressZip        String?
+  // Origem do aluno — usado no painel de Captação (blocos REDE SOCIAL e EMPRESAS)
+  socialNetwork     String?
+  company           String?
   paymentMethod     PaymentMethod?
   paymentDetails    String?        @db.Text
   installments      Int            @default(1)
