@@ -32,7 +32,7 @@ function LoginForm() {
   const params = useSearchParams();
   const callbackUrl = params.get("callbackUrl") || "/";
 
-  const [email, setEmail] = useState("");
+  const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [mostrarAjudaSenha, setMostrarAjudaSenha] = useState(false);
@@ -42,14 +42,14 @@ function LoginForm() {
     setLoading(true);
 
     const res = await signIn("credentials", {
-      email,
+      login,
       password,
       redirect: false,
     });
 
     if (res?.error) {
       toast.error("Credenciais inválidas", {
-        description: "Verifique seu e-mail e senha.",
+        description: "Verifique seu e-mail (ou código) e a senha.",
       });
       setLoading(false);
       return;
@@ -132,18 +132,18 @@ function LoginForm() {
 
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
+              <Label htmlFor="login">E-mail ou código</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="login"
+                  type="text"
+                  placeholder="seu@email.com ou 000879"
+                  value={login}
+                  onChange={(e) => setLogin(e.target.value)}
                   className="pl-9"
                   required
-                  autoComplete="email"
+                  autoComplete="username"
                 />
               </div>
             </div>

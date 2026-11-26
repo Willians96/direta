@@ -137,7 +137,23 @@ export default async function AdminUsuariosPage() {
                   users.map((u) => (
                     <TableRow key={u.id}>
                       <TableCell className="text-slate-500 text-xs">{u.code ?? "—"}</TableCell>
-                      <TableCell className="font-medium">{u.name}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-slate-50 text-[10px] font-semibold text-slate-400">
+                            {u.avatarUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={`/api/users/avatar/${u.id}`}
+                                alt={u.name}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              u.name.slice(0, 2).toUpperCase()
+                            )}
+                          </div>
+                          <span className="font-medium">{u.name}</span>
+                        </div>
+                      </TableCell>
                       <TableCell className="text-slate-600">
                         {u.jobTitle ?? "—"}
                       </TableCell>

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Loader2, Plus, Pencil, UserCog, MapPin, IdCard, Phone } from "lucide-react";
+import { Camera, Loader2, Plus, Pencil, UserCog, MapPin, IdCard, Phone } from "lucide-react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,7 @@ import {
 import {
   createUserAction,
   updateUserAction,
+  uploadUserAvatarAction,
   type ActionState,
 } from "@/lib/actions/users";
 
@@ -61,6 +62,8 @@ const userSchema = z.object({
   addressZip: z.string().optional(),
   notes: z.string().optional(),
   showEnrollment: z.boolean(),
+  // Referência da foto enviada ao storage antes do cadastro (tela de criação).
+  avatarRef: z.string().optional(),
 });
 
 type UserFormData = z.infer<typeof userSchema>;
@@ -115,6 +118,11 @@ export function UserFormDialog({ user }: UserFormDialogProps) {
   const isEdit = !!user;
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  // Pré-visualização da foto escolhida (object URL) — o banco só guarda a
+  // referência do arquivo.
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [enviandoFoto, setEnviandoFoto] = useState(false);
+  const inputFotoRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -210,6 +218,7 @@ export function UserFormDialog({ user }: UserFormDialogProps) {
     formData.append("addressZip", data.addressZip ?? "");
     formData.append("notes", data.notes ?? "");
     formData.append("showEnrollment", String(data.showEnrollment));
+    if (data.avatarRef) formData.append("avatarRef", data.avatarRef);
 
     startTransition(async () => {
       const action = isEdit
@@ -226,6 +235,35 @@ export function UserFormDialog({ user }: UserFormDialogProps) {
       }
     });
   });
+
+  /** Envia a foto escolhida para o storage (equivalente ao "Localizar" da tela antiga). */
+  async function enviarFoto(file: File) {
+    setEnviandoFoto(true);
+    try {
+      const dados = new FormData();
+      dados.append("file", file);
+
+      const res = await uploadUserAvatarAction(isEdit ? user!.id : null, dados);
+
+      if (!res.ok) {
+        toast.error(res.error ?? "Erro ao enviar a foto.");
+        return;
+      }
+
+      setFotoPreview(URL.createObjectURL(file));
+      // Na criação, o cadastro ainda não existe: a referência vai no formulário
+      // e é gravada junto com o colaborador.
+      if (!isEdit && res.reference) {
+        setValue("avatarRef", res.reference);
+      }
+      toast.success("Foto atualizada!");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao enviar a foto.");
+    } finally {
+      setEnviandoFoto(false);
+      if (inputFotoRef.current) inputFotoRef.current.value = "";
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -373,17 +411,56 @@ export function UserFormDialog({ user }: UserFormDialogProps) {
               </div>
               <div className="space-y-2">
                 <Label>Foto</Label>
-                <div className="flex h-[60px] w-[60px] items-center justify-center overflow-hidden rounded-md border bg-slate-50 text-[10px] text-slate-400">
-                  {user?.avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={user.avatarUrl}
-                      alt="Foto do colaborador"
-                      className="h-full w-full object-cover"
+                <div className="flex items-center gap-3">
+                  <div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center overflow-hidden rounded-md border bg-slate-50 text-[10px] text-slate-400">
+                    {fotoPreview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={fotoPreview}
+                        alt="Foto do colaborador"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : isEdit && user?.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={`/api/users/avatar/${user!.id}`}
+                        alt="Foto do colaborador"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      "FOTO"
+                    )}
+                  </div>
+                  <div>
+                    <input
+                      ref={inputFotoRef}
+                      id="foto"
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) enviarFoto(file);
+                      }}
                     />
-                  ) : (
-                    "FOTO"
-                  )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={enviandoFoto}
+                      onClick={() => inputFotoRef.current?.click()}
+                    >
+                      {enviandoFoto ? (
+                        <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                      ) : (
+                        <Camera className="mr-2 h-3 w-3" />
+                      )}
+                      {user?.avatarUrl || fotoPreview ? "Trocar foto" : "Enviar foto"}
+                    </Button>
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      JPG, PNG, WEBP ou GIF, até 3 MB.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -425,7 +502,7 @@ export function UserFormDialog({ user }: UserFormDialogProps) {
           {/* ACESSO E SITUAÇÃO */}
           <section className="space-y-3">
             <h3 className="text-sm font-semibold text-slate-700">Acesso e situação</h3>
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-4">
               <div className="space-y-2">
                 <Label>Perfil</Label>
                 <Select
@@ -446,23 +523,23 @@ export function UserFormDialog({ user }: UserFormDialogProps) {
                 </Select>
               </div>
 
-              {isEdit ? (
-                <div className="space-y-2">
-                  <Label>Situação</Label>
-                  <Select
-                    value={status}
-                    onValueChange={(v) => setValue("status", v as "ATIVO" | "INATIVO")}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ATIVO">Ativo</SelectItem>
-                      <SelectItem value="INATIVO">Inativo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : (
+              <div className="space-y-2">
+                <Label>Situação</Label>
+                <Select
+                  value={status ?? "ATIVO"}
+                  onValueChange={(v) => setValue("status", v as "ATIVO" | "INATIVO")}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ATIVO">Ativo</SelectItem>
+                    <SelectItem value="INATIVO">Inativo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {!isEdit && (
                 <div className="space-y-2">
                   <Label htmlFor="password">Senha inicial *</Label>
                   <Input

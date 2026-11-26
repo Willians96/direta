@@ -4,8 +4,10 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { saveStoredFile, deleteStoredFile } from "@/lib/storage";
 
 /**
  * Cadastro de colaboradores — tela pedida pela cliente com os campos do
@@ -36,6 +38,10 @@ const createUserSchema = z.object({
   password: z.string().min(6, "Mínimo 6 caracteres"),
   role: z.enum(["ADMIN", "CAPTACAO", "VENDAS", "RECEPCAO"]),
   phone: z.string().optional(),
+  // Situação já pode ser definida na criação (tela antiga permitia Inativo).
+  status: z.enum(["ATIVO", "INATIVO"]).optional(),
+  // Referência da foto já enviada para o storage (upload feito antes do envio).
+  avatarRef: z.string().max(300).optional().or(z.literal("")),
   ...camposColaborador,
 });
 
@@ -109,6 +115,8 @@ export async function createUserAction(
       password: formData.get("password") as string,
       role: formData.get("role") as string,
       phone: (formData.get("phone") as string) || undefined,
+      status: (formData.get("status") as string) || undefined,
+      avatarRef: (formData.get("avatarRef") as string) || undefined,
       ...dadosColaborador(formData),
     };
 
@@ -147,7 +155,8 @@ export async function createUserAction(
         passwordHash,
         role: parsed.data.role,
         phone: parsed.data.phone,
-        status: "ATIVO",
+        status: parsed.data.status ?? "ATIVO",
+        avatarUrl: parsed.data.avatarRef || null,
         code: parsed.data.code || null,
         admissionDate: parsed.data.admissionDate
           ? new Date(parsed.data.admissionDate)
@@ -326,6 +335,88 @@ async function existeOutroAdminAtivo(ignorarId: string): Promise<boolean> {
     select: { id: true },
   });
   return !!outro;
+}
+
+const MAX_FOTO_SIZE = 3 * 1024 * 1024; // 3 MB
+const TIPOS_FOTO = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/gif",
+]);
+
+/**
+ * Envia a foto do colaborador (equivalente ao "Tirar Foto / Localizar" da tela
+ * antiga). O arquivo vai para o storage (Blob quando configurado, senão o
+ * filesystem da VPS) e o banco guarda só a referência.
+ *
+ * - Com `userId`: atualiza a foto do colaborador e apaga a anterior.
+ * - Sem `userId` (tela de criação): devolve a referência para o formulário
+ *   gravar no cadastro assim que o colaborador for criado.
+ */
+export async function uploadUserAvatarAction(
+  userId: string | null,
+  formData: FormData
+): Promise<{ ok: boolean; error?: string; reference?: string }> {
+  try {
+    await requireAdmin();
+
+    const file = formData.get("file") as File | null;
+    if (!file || file.size === 0) {
+      return { ok: false, error: "Selecione uma foto." };
+    }
+    if (file.size > MAX_FOTO_SIZE) {
+      return {
+        ok: false,
+        error: `Foto muito grande (máx. ${MAX_FOTO_SIZE / 1024 / 1024} MB).`,
+      };
+    }
+
+    const mimeType = (file.type || "").toLowerCase();
+    if (!TIPOS_FOTO.has(mimeType)) {
+      return { ok: false, error: "Formato inválido. Use JPG, PNG, WEBP ou GIF." };
+    }
+
+    const ext =
+      mimeType === "image/png"
+        ? ".png"
+        : mimeType === "image/webp"
+          ? ".webp"
+          : mimeType === "image/gif"
+            ? ".gif"
+            : ".jpg";
+
+    const bytes = Buffer.from(await file.arrayBuffer());
+    const pathname = `users/${randomUUID()}/avatar${ext}`;
+    const reference = await saveStoredFile({ pathname, bytes, mimeType });
+
+    if (userId) {
+      const antes = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { avatarUrl: true },
+      });
+      if (!antes) {
+        return { ok: false, error: "Usuário não encontrado." };
+      }
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { avatarUrl: reference },
+      });
+
+      // Apaga a foto anterior para não acumular arquivos.
+      if (antes.avatarUrl && antes.avatarUrl !== reference) {
+        await deleteStoredFile(antes.avatarUrl);
+      }
+
+      revalidatePath("/admin/usuarios");
+    }
+
+    return { ok: true, reference };
+  } catch (e: any) {
+    return { ok: false, error: e?.message ?? "Erro ao enviar a foto." };
+  }
 }
 
 export async function toggleUserStatusAction(

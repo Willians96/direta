@@ -7,7 +7,12 @@ import { prisma } from "@/lib/prisma";
 import type { UserRole } from "@prisma/client";
 
 const credentialsSchema = z.object({
-  email: z.string().email(),
+  // A cliente pediu que o colaborador entre com "login e senha". Aceitamos
+  // o e-mail OU o código do cadastro (ex.: 000879) — os dois funcionam.
+  // O campo `email` continua sendo aceito porque é o que os scripts de
+  // validação (curl) já enviam para /api/auth/callback/credentials.
+  login: z.string().min(1).max(160).optional(),
+  email: z.string().min(1).max(160).optional(),
   password: z.string().min(6),
 });
 
@@ -21,15 +26,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
       credentials: {
-        email: { label: "E-mail", type: "email" },
+        login: { label: "E-mail ou código", type: "text" },
+        email: { label: "E-mail", type: "text" },
         password: { label: "Senha", type: "password" },
       },
       authorize: async (credentials) => {
         const parsed = credentialsSchema.safeParse(credentials);
         if (!parsed.success) return null;
 
-        const { email, password } = parsed.data;
-        const user = await prisma.user.findUnique({ where: { email } });
+        const { password } = parsed.data;
+        const login = (parsed.data.login || parsed.data.email || "").trim();
+        if (!login) return null;
+
+        // Login por e-mail OU por código do colaborador.
+        const user = await prisma.user.findFirst({
+          where: { OR: [{ email: login }, { code: login }] },
+        });
         if (!user || user.status !== "ATIVO") return null;
 
         const passwordMatch = await bcrypt.compare(password, user.passwordHash);
