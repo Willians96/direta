@@ -34,6 +34,7 @@ import {
   SITUACAO_VARIANTS,
 } from "@/lib/alunos";
 import { updateStudentStatusAction } from "@/lib/actions/alunos";
+import { rotuloPagamento } from "@/lib/registries";
 import { documentTypeLabel, documentTypeVariant } from "@/lib/document-types";
 import { formatCurrency, formatDate, formatDateTime, formatPhone } from "@/lib/utils";
 
@@ -82,17 +83,6 @@ export default async function AlunoDetalhePage({
     .filter(Boolean)
     .join(", ");
   const cidade = [aluno.addressCity, aluno.addressState].filter(Boolean).join(" - ");
-
-  const paymentLabels: Record<string, string> = {
-    PIX: "PIX",
-    BOLETO: "Boleto",
-    CARTAO_CREDITO: "Cartão de crédito",
-    CARTAO_DEBITO: "Cartão de débito",
-    DINHEIRO: "Dinheiro",
-    TRANSFERENCIA: "Transferência",
-    PARCELADO_PROPRIO: "Parcelado próprio",
-    OUTRO: "Outro",
-  };
 
   return (
     <div>
@@ -294,7 +284,7 @@ export default async function AlunoDetalhePage({
               />
               <Dado
                 label="Pagamento"
-                value={aluno.paymentMethod ? paymentLabels[aluno.paymentMethod] : null}
+                value={aluno.paymentMethod ? rotuloPagamento(aluno.paymentMethod) : null}
               />
               <Dado label="Parcelas" value={`${aluno.installments}x`} />
               <Dado

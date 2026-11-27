@@ -50,7 +50,7 @@ const classSchema = z.object({
   endDate: z.string().optional(),
   maxStudents: z.coerce.number().int().positive("Lotação > 0"),
   professorId: z.string().optional(),
-  status: z.enum(["ABERTA", "EM_ANDAMENTO", "ENCERRADA", "CANCELADA"]),
+  status: z.string().min(1, "Escolha a situação da turma"),
   notes: z.string().max(500).optional(),
 });
 
@@ -59,6 +59,8 @@ type FormData = z.infer<typeof classSchema>;
 interface ClassFormDialogProps {
   courses: Array<{ id: string; name: string }>;
   professors: Array<{ id: string; name: string; role: string }>;
+  /** Situações de turma cadastradas (Administração › Situações de turma). */
+  situacoes: Array<{ value: string; label: string }>;
   cls?: {
     id: string;
     courseId: string;
@@ -74,7 +76,12 @@ interface ClassFormDialogProps {
   };
 }
 
-export function ClassFormDialog({ courses, professors, cls }: ClassFormDialogProps) {
+export function ClassFormDialog({
+  courses,
+  professors,
+  situacoes,
+  cls,
+}: ClassFormDialogProps) {
   const isEdit = !!cls;
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -111,7 +118,7 @@ export function ClassFormDialog({ courses, professors, cls }: ClassFormDialogPro
           endDate: "",
           maxStudents: 30,
           professorId: "",
-          status: "ABERTA",
+          status: situacoes[0]?.value ?? "ABERTA",
           notes: "",
         },
   });
@@ -323,10 +330,11 @@ export function ClassFormDialog({ courses, professors, cls }: ClassFormDialogPro
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ABERTA">Aberta</SelectItem>
-                <SelectItem value="EM_ANDAMENTO">Em andamento</SelectItem>
-                <SelectItem value="ENCERRADA">Encerrada</SelectItem>
-                <SelectItem value="CANCELADA">Cancelada</SelectItem>
+                {situacoes.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

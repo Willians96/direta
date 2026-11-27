@@ -29,8 +29,20 @@ const classSchema = z.object({
   scheduleDays: z.array(z.string()).optional(),
   scheduleTime: z.string().optional(),
   notes: z.string().max(500).optional(),
-  status: z.enum(["ABERTA", "EM_ANDAMENTO", "ENCERRADA", "CANCELADA"]).default("ABERTA"),
+  status: z.string().min(1, "Escolha a situação da turma"),
 });
+
+/**
+ * A situação da turma vem do cadastro (Administração › Situações de turma).
+ * Validamos contra o cadastro para não gravar uma situação "solta".
+ */
+async function situacaoTurmaCadastrada(status: string): Promise<boolean> {
+  const existe = await prisma.classStatusType.findUnique({
+    where: { description: status },
+    select: { id: true },
+  });
+  return !!existe;
+}
 
 export async function createClassAction(
   _prev: ActionState,
@@ -59,6 +71,14 @@ export async function createClassAction(
       return {
         ok: false,
         error: parsed.error.issues[0]?.message ?? "Dados inválidos",
+      };
+    }
+
+    if (!(await situacaoTurmaCadastrada(parsed.data.status))) {
+      return {
+        ok: false,
+        error:
+          "Situação de turma inválida. Cadastre em Administração › Situações de turma.",
       };
     }
 
@@ -131,6 +151,14 @@ export async function updateClassAction(
       return {
         ok: false,
         error: parsed.error.issues[0]?.message ?? "Dados inválidos",
+      };
+    }
+
+    if (!(await situacaoTurmaCadastrada(parsed.data.status))) {
+      return {
+        ok: false,
+        error:
+          "Situação de turma inválida. Cadastre em Administração › Situações de turma.",
       };
     }
 

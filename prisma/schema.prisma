@@ -173,24 +173,26 @@ model Course {
 }
 
 // ============================================
-// FORMAS DE PAGAMENTO (associadas ao curso)
+// FORMAS DE PAGAMENTO (cadastro + associação ao curso)
 // ============================================
 
-enum PaymentMethod {
-  PIX
-  BOLETO
-  CARTAO_CREDITO
-  CARTAO_DEBITO
-  DINHEIRO
-  TRANSFERENCIA
-  PARCELADO_PROPRIO
-  OUTRO
+/// Cadastro de formas de pagamento. A cliente pediu para poder cadastrar
+/// "mais formas de pagamento" — antes a lista era fixa no código.
+/// As formas ativas alimentam o cadastro de curso e a matrícula.
+model PaymentMethodType {
+  id          String   @id @default(cuid())
+  description String   @unique
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("payment_method_types")
 }
 
 model CoursePaymentMethod {
   id        String        @id @default(cuid())
   courseId  String
-  method    PaymentMethod
+  method    String        @db.Text
   details   String?       // ex: "3x sem juros", "10% desconto à vista"
   active    Boolean       @default(true)
   createdAt DateTime      @default(now())
@@ -201,11 +203,17 @@ model CoursePaymentMethod {
   @@map("course_payment_methods")
 }
 
-enum ClassStatus {
-  ABERTA
-  EM_ANDAMENTO
-  ENCERRADA
-  CANCELADA
+/// Cadastro de situações de turma — a cliente pediu para poder "alterar ou
+/// criar os status" da turma. As situações ativas alimentam o select do
+/// cadastro de turma.
+model ClassStatusType {
+  id          String   @id @default(cuid())
+  description String   @unique
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("class_status_types")
 }
 
 model Class {
@@ -218,7 +226,7 @@ model Class {
   endDate     DateTime?
   maxStudents Int         @default(30)
   professorId String?
-  status      ClassStatus @default(ABERTA)
+  status      String      @default("ABERTA") @db.Text
   notes       String?     @db.Text
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -709,7 +717,7 @@ model Enrollment {
   // Origem do aluno — usado no painel de Captação (blocos REDE SOCIAL e EMPRESAS)
   socialNetwork     String?
   company           String?
-  paymentMethod     PaymentMethod?
+  paymentMethod     String?             @db.Text
   paymentDetails    String?        @db.Text
   installments      Int            @default(1)
   totalAmount       Decimal        @db.Decimal(10, 2)

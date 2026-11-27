@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getStudents, SITUACAO_LABELS } from "@/lib/alunos";
+import { rotuloPagamento } from "@/lib/registries";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest) {
         a.className,
         SITUACAO_LABELS[a.situacao],
         a.enrolledAt.toLocaleDateString("pt-BR"),
-        a.paymentMethod,
+        a.paymentMethod ? rotuloPagamento(a.paymentMethod) : "",
         a.installments,
         a.totalAmount.toFixed(2),
         a.source,

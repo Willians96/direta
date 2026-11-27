@@ -24,6 +24,7 @@ import {
   UsersRound,
   Plug,
   Waypoints,
+  CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/shared/logo";
@@ -42,6 +43,8 @@ const NAV_ITEMS: NavItem[] = [
   { title: "Usuários", href: "/admin/usuarios", icon: Users, roles: ["ADMIN"] },
   { title: "Cursos", href: "/admin/cursos", icon: GraduationCap, roles: ["ADMIN"] },
   { title: "Turmas", href: "/admin/turmas", icon: ClipboardList, roles: ["ADMIN"] },
+  { title: "Formas de pagamento", href: "/admin/formas-pagamento", icon: CreditCard, roles: ["ADMIN"] },
+  { title: "Situações de turma", href: "/admin/situacoes-turma", icon: ClipboardList, roles: ["ADMIN"] },
   { title: "Metas", href: "/admin/metas", icon: TrendingUp, roles: ["ADMIN"] },
   { title: "Relatórios", href: "/admin/relatorios", icon: BarChart3, roles: ["ADMIN"] },
   { title: "Alertas", href: "/admin/alertas", icon: AlertTriangle, roles: ["ADMIN", "CAPTACAO"] },

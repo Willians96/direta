@@ -22,6 +22,8 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { formatDate } from "@/lib/utils";
 import { deleteClassAction } from "@/lib/actions/classes";
+import { rotuloSituacaoTurma } from "@/lib/registries";
+import { getSituacoesTurmaAtivas } from "@/lib/registries-db";
 import { ClassFormDialog } from "./class-form-dialog";
 
 export const dynamic = "force-dynamic";
@@ -43,7 +45,7 @@ export default async function AdminTurmasPage() {
     redirect("/");
   }
 
-  const [classes, courses, professors] = await Promise.all([
+  const [classes, courses, professors, situacoes] = await Promise.all([
     prisma.class.findMany({
       orderBy: { startDate: "desc" },
       include: {
@@ -66,6 +68,7 @@ export default async function AdminTurmasPage() {
       select: { id: true, name: true, role: true },
       orderBy: { name: "asc" },
     }),
+    getSituacoesTurmaAtivas(),
   ]);
 
   const total = classes.length;
@@ -87,7 +90,7 @@ export default async function AdminTurmasPage() {
         title="Turmas"
         description="Horários, lotação, professor e alunos matriculados"
         icon={Users}
-        action={<ClassFormDialog courses={courses} professors={professors} />}
+        action={<ClassFormDialog courses={courses} professors={professors} situacoes={situacoes} />}
       />
 
       <div className="space-y-6 p-4 md:p-6">
@@ -229,8 +232,8 @@ export default async function AdminTurmasPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={STATUS_VARIANTS[cls.status]}>
-                            {cls.status.replace("_", " ")}
+                          <Badge variant={STATUS_VARIANTS[cls.status] ?? "neutral"}>
+                            {rotuloSituacaoTurma(cls.status)}
                           </Badge>
                           <div className="mt-1 text-xs text-slate-500">
                             <Calendar className="inline h-3 w-3" />{" "}
@@ -247,6 +250,7 @@ export default async function AdminTurmasPage() {
                             <ClassFormDialog
                               courses={courses}
                               professors={professors}
+                              situacoes={situacoes}
                               cls={{
                                 id: cls.id,
                                 courseId: cls.courseId,

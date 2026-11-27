@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getFormasPagamentoAtivas } from "@/lib/registries-db";
 import { StudentForm } from "../student-form";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +20,7 @@ export default async function NovoAlunoPage({
   if (!session?.user) redirect("/login");
   if (role !== "ADMIN" && role !== "RECEPCAO") redirect(`/${role?.toLowerCase()}`);
 
-  const [courses, classes] = await Promise.all([
+  const [courses, classes, formasPagamento] = await Promise.all([
     prisma.course.findMany({
       where: { status: "ATIVO" },
       select: { id: true, name: true, price: true },
@@ -33,6 +34,7 @@ export default async function NovoAlunoPage({
       },
       orderBy: { name: "asc" },
     }),
+    getFormasPagamentoAtivas(),
   ]);
 
   return (
@@ -62,6 +64,7 @@ export default async function NovoAlunoPage({
           mode="novo"
           courses={courses.map((c) => ({ ...c, price: Number(c.price) }))}
           classes={classes.map((c) => ({ id: c.id, name: c.name, courseName: c.course.name }))}
+          formasPagamento={formasPagamento}
           erro={searchParams.erro ?? null}
         />
       </div>

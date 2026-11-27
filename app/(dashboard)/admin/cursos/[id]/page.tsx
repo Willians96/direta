@@ -33,21 +33,12 @@ import { PageHeader } from "@/components/shared/page-header";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { rotuloPagamento, rotuloSituacaoTurma } from "@/lib/registries";
+import { getFormasPagamentoAtivas, getSituacoesTurmaAtivas } from "@/lib/registries-db";
 import { CourseFormDialog } from "../course-form-dialog";
 import { ClassFormDialog } from "../../turmas/class-form-dialog";
 
 export const dynamic = "force-dynamic";
-
-const PAYMENT_LABELS: Record<string, string> = {
-  PIX: "PIX",
-  BOLETO: "Boleto",
-  CARTAO_CREDITO: "Cartão de Crédito",
-  CARTAO_DEBITO: "Cartão de Débito",
-  DINHEIRO: "Dinheiro",
-  TRANSFERENCIA: "Transferência",
-  PARCELADO_PROPRIO: "Parcelado Próprio",
-  OUTRO: "Outro",
-};
 
 const CLASS_STATUS_VARIANTS: Record<string, "success" | "info" | "warning" | "neutral"> = {
   ABERTA: "success",
@@ -68,7 +59,7 @@ export default async function AdminCursoDetalhePage({
   const session = await auth();
   if ((session?.user as any)?.role !== "ADMIN") redirect("/");
 
-  const [course, professors] = await Promise.all([
+  const [course, professors, formasPagamento, situacoes] = await Promise.all([
     prisma.course.findUnique({
       where: { id: params.id },
       include: {
@@ -93,6 +84,8 @@ export default async function AdminCursoDetalhePage({
       select: { id: true, name: true, role: true },
       orderBy: { name: "asc" },
     }),
+    getFormasPagamentoAtivas(),
+    getSituacoesTurmaAtivas(),
   ]);
 
   if (!course) notFound();
@@ -117,6 +110,7 @@ export default async function AdminCursoDetalhePage({
               </Link>
             </Button>
             <CourseFormDialog
+              formasPagamento={formasPagamento}
               course={{
                 id: course.id,
                 name: course.name,
@@ -231,7 +225,7 @@ export default async function AdminCursoDetalhePage({
                     >
                       <div className="flex items-center gap-2">
                         <Badge variant="info">
-                          {PAYMENT_LABELS[pm.method] ?? pm.method}
+                          {rotuloPagamento(pm.method)}
                         </Badge>
                       </div>
                       {pm.details && (
@@ -262,6 +256,7 @@ export default async function AdminCursoDetalhePage({
             <ClassFormDialog
               courses={allCourses}
               professors={professors}
+              situacoes={situacoes}
             />
           </CardHeader>
           <CardContent>
@@ -333,8 +328,8 @@ export default async function AdminCursoDetalhePage({
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={CLASS_STATUS_VARIANTS[cls.status]}>
-                            {cls.status.replace("_", " ")}
+                          <Badge variant={CLASS_STATUS_VARIANTS[cls.status] ?? "neutral"}>
+                            {rotuloSituacaoTurma(cls.status)}
                           </Badge>
                           <div className="mt-1 text-xs text-slate-500">
                             <Calendar className="inline h-3 w-3" />{" "}

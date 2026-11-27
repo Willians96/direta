@@ -21,6 +21,8 @@ import { PageHeader } from "@/components/shared/page-header";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { formatCurrency } from "@/lib/utils";
+import { rotuloPagamento } from "@/lib/registries";
+import { getFormasPagamentoAtivas } from "@/lib/registries-db";
 import { CourseFormDialog } from "./course-form-dialog";
 
 export const dynamic = "force-dynamic";
@@ -31,35 +33,27 @@ const STATUS_VARIANTS: Record<string, "success" | "warning" | "neutral"> = {
   INATIVO: "neutral",
 };
 
-const PAYMENT_LABELS: Record<string, string> = {
-  PIX: "PIX",
-  BOLETO: "Boleto",
-  CARTAO_CREDITO: "Crédito",
-  CARTAO_DEBITO: "Débito",
-  DINHEIRO: "Dinheiro",
-  TRANSFERENCIA: "Transf.",
-  PARCELADO_PROPRIO: "Parcelado",
-  OUTRO: "Outro",
-};
-
 export default async function AdminCursosPage() {
   const session = await auth();
   if ((session?.user as any)?.role !== "ADMIN") {
     redirect("/");
   }
 
-  const courses = await prisma.course.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      _count: {
-        select: { classes: true, leads: true },
+  const [courses, formasPagamento] = await Promise.all([
+    prisma.course.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        _count: {
+          select: { classes: true, leads: true },
+        },
+        paymentMethods: {
+          where: { active: true },
+          orderBy: { method: "asc" },
+        },
       },
-      paymentMethods: {
-        where: { active: true },
-        orderBy: { method: "asc" },
-      },
-    },
-  });
+    }),
+    getFormasPagamentoAtivas(),
+  ]);
 
   const totalAtivos = courses.filter((c) => c.status === "ATIVO").length;
   const totalEmBreve = courses.filter((c) => c.status === "EM_BREVE").length;
@@ -70,7 +64,7 @@ export default async function AdminCursosPage() {
         title="Cursos"
         description="Catálogo de cursos, cargas horárias e preços"
         icon={GraduationCap}
-        action={<CourseFormDialog />}
+        action={<CourseFormDialog formasPagamento={formasPagamento} />}
       />
 
       <div className="space-y-6 p-4 md:p-6">
@@ -168,7 +162,7 @@ export default async function AdminCursosPage() {
                                 className="text-[10px]"
                               >
                                 <CreditCard className="mr-0.5 h-2.5 w-2.5" />
-                                {PAYMENT_LABELS[pm.method] ?? pm.method}
+                                {rotuloPagamento(pm.method)}
                               </Badge>
                             ))}
                             {c.paymentMethods.length > 3 && (
@@ -207,6 +201,7 @@ export default async function AdminCursosPage() {
                             </Link>
                           </Button>
                           <CourseFormDialog
+                            formasPagamento={formasPagamento}
                             course={{
                               id: c.id,
                               name: c.name,

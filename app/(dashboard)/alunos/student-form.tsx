@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PaymentMethod } from "@prisma/client";
 import {
   createStudentAction,
   updateStudentAction,
@@ -20,17 +19,6 @@ import {
  * da ficha. É um Server Component: a submissão acontece por server action,
  * igual ao formulário de matrícula já existente.
  */
-
-const PAYMENT_LABELS: Record<PaymentMethod, string> = {
-  PIX: "PIX",
-  BOLETO: "Boleto",
-  CARTAO_CREDITO: "Cartão de crédito",
-  CARTAO_DEBITO: "Cartão de débito",
-  DINHEIRO: "Dinheiro",
-  TRANSFERENCIA: "Transferência",
-  PARCELADO_PROPRIO: "Parcelado próprio",
-  OUTRO: "Outro",
-};
 
 export type AlunoFormValues = {
   fullName: string;
@@ -83,6 +71,7 @@ export function StudentForm({
   enrollmentId,
   courses,
   classes,
+  formasPagamento,
   defaultValues,
   erro,
 }: {
@@ -90,6 +79,8 @@ export function StudentForm({
   enrollmentId?: string;
   courses: { id: string; name: string; price: number }[];
   classes: { id: string; name: string; courseName: string }[];
+  /** Formas de pagamento ativas (Administração › Formas de pagamento). */
+  formasPagamento: { value: string; label: string }[];
   defaultValues?: Partial<AlunoFormValues>;
   erro?: string | null;
 }) {
@@ -115,8 +106,7 @@ export function StudentForm({
           addressCity: (formData.get("addressCity") as string) || "",
           addressState: (formData.get("addressState") as string) || "",
           addressZip: (formData.get("addressZip") as string) || "",
-          paymentMethod: ((formData.get("paymentMethod") as string) ||
-            "") as PaymentMethod | "",
+          paymentMethod: (formData.get("paymentMethod") as string) || "",
           paymentDetails: (formData.get("paymentDetails") as string) || "",
           installments: Number(formData.get("installments") || 1),
           totalAmount: Number(formData.get("totalAmount") || 0),
@@ -269,9 +259,9 @@ export function StudentForm({
               className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
             >
               <option value="">Não informado</option>
-              {Object.entries(PAYMENT_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
+              {formasPagamento.map((f) => (
+                <option key={f.value} value={f.value}>
+                  {f.label}
                 </option>
               ))}
             </select>

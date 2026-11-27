@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { PaymentMethod, SalesStatus } from "@prisma/client";
+import { SalesStatus } from "@prisma/client";
 
 /**
  * Sprint 14 — "Realizar Matrícula".
@@ -31,7 +31,7 @@ const enrollmentSchema = z.object({
   addressZip: z.string().max(12).optional().or(z.literal("")),
   socialNetwork: z.string().max(120).optional().or(z.literal("")),
   company: z.string().max(120).optional().or(z.literal("")),
-  paymentMethod: z.nativeEnum(PaymentMethod).optional().or(z.literal("")),
+  paymentMethod: z.string().max(80).optional().or(z.literal("")),
   paymentDetails: z.string().max(300).optional().or(z.literal("")),
   installments: z.coerce.number().int().min(1).max(60).default(1),
   totalAmount: z.coerce.number().min(0, "Valor inválido"),
@@ -92,7 +92,7 @@ export async function createEnrollmentAction(raw: EnrollmentInput) {
       addressZip: data.addressZip || null,
       socialNetwork: data.socialNetwork || null,
       company: data.company || null,
-      paymentMethod: (data.paymentMethod || null) as PaymentMethod | null,
+      paymentMethod: data.paymentMethod || null,
       paymentDetails: data.paymentDetails || null,
       installments: data.installments,
       totalAmount: data.totalAmount,

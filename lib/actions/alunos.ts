@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { ClassStudentStatus, PaymentMethod } from "@prisma/client";
+import { ClassStudentStatus } from "@prisma/client";
 import type { StudentStatus } from "@/lib/alunos";
 
 /**
@@ -33,7 +33,7 @@ const alunoSchema = z.object({
   addressCity: z.string().max(80).optional().or(z.literal("")),
   addressState: z.string().max(2).optional().or(z.literal("")),
   addressZip: z.string().max(12).optional().or(z.literal("")),
-  paymentMethod: z.nativeEnum(PaymentMethod).optional().or(z.literal("")),
+  paymentMethod: z.string().max(80).optional().or(z.literal("")),
   paymentDetails: z.string().max(300).optional().or(z.literal("")),
   installments: z.coerce.number().int().min(1).max(60).default(1),
   totalAmount: z.coerce.number().min(0, "Valor inválido"),
@@ -127,7 +127,7 @@ export async function createStudentAction(raw: AlunoInput) {
       addressCity: data.addressCity || null,
       addressState: data.addressState || null,
       addressZip: data.addressZip || null,
-      paymentMethod: (data.paymentMethod || null) as PaymentMethod | null,
+      paymentMethod: data.paymentMethod || null,
       paymentDetails: data.paymentDetails || null,
       installments: data.installments,
       totalAmount: data.totalAmount,
@@ -203,7 +203,7 @@ export async function updateStudentAction(enrollmentId: string, raw: AlunoInput)
       addressCity: data.addressCity || null,
       addressState: data.addressState || null,
       addressZip: data.addressZip || null,
-      paymentMethod: (data.paymentMethod || null) as PaymentMethod | null,
+      paymentMethod: data.paymentMethod || null,
       paymentDetails: data.paymentDetails || null,
       installments: data.installments,
       totalAmount: data.totalAmount,

@@ -39,6 +39,7 @@ import {
   updateEnrollmentStatusAction,
 } from "@/lib/actions/classes";
 import { EnrollDialog } from "./enroll-dialog";
+import { rotuloSituacaoTurma } from "@/lib/registries";
 
 export const dynamic = "force-dynamic";
 
@@ -165,8 +166,8 @@ export default async function AdminTurmaDetalhePage({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Badge variant={STATUS_VARIANTS[cls.status]} className="text-base">
-                {cls.status.replace("_", " ")}
+              <Badge variant={STATUS_VARIANTS[cls.status] ?? "neutral"} className="text-base">
+                {rotuloSituacaoTurma(cls.status)}
               </Badge>
             </CardContent>
           </Card>

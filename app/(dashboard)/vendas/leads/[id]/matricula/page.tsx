@@ -28,18 +28,8 @@ import { PageHeader } from "@/components/shared/page-header";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createEnrollmentAction } from "@/lib/actions/enrollments";
-import { PaymentMethod } from "@prisma/client";
-
-const PAYMENT_LABELS: Record<PaymentMethod, string> = {
-  PIX: "PIX",
-  BOLETO: "Boleto",
-  CARTAO_CREDITO: "Cartão de crédito",
-  CARTAO_DEBITO: "Cartão de débito",
-  DINHEIRO: "Dinheiro",
-  TRANSFERENCIA: "Transferência",
-  PARCELADO_PROPRIO: "Parcelado próprio",
-  OUTRO: "Outro",
-};
+import { getFormasPagamentoAtivas } from "@/lib/registries-db";
+import { SITUACOES_COM_MATRICULA } from "@/lib/registries";
 
 export default async function MatriculaPage({
   params,
@@ -65,17 +55,18 @@ export default async function MatriculaPage({
     redirect("/vendas/leads");
   }
 
-  const [courses, classes] = await Promise.all([
+  const [courses, classes, formasPagamento] = await Promise.all([
     prisma.course.findMany({
       where: { status: "ATIVO" },
       select: { id: true, name: true, price: true },
       orderBy: { name: "asc" },
     }),
     prisma.class.findMany({
-      where: { status: { in: ["ABERTA", "EM_ANDAMENTO"] } },
+      where: { status: { in: [...SITUACOES_COM_MATRICULA] } },
       include: { course: { select: { name: true } } },
       orderBy: { startDate: "asc" },
     }),
+    getFormasPagamentoAtivas(),
   ]);
 
   if (lead.enrollment) {
@@ -133,6 +124,7 @@ export default async function MatriculaPage({
             name: c.name,
             courseName: c.course.name,
           }))}
+          formasPagamento={formasPagamento}
           defaultCourseId={defaultCourseId}
           defaultAmount={defaultAmount}
           defaultValues={{
@@ -156,6 +148,7 @@ function EnrollmentForm({
   leadId,
   courses,
   classes,
+  formasPagamento,
   defaultCourseId,
   defaultAmount,
   defaultValues,
@@ -163,6 +156,8 @@ function EnrollmentForm({
   leadId: string;
   courses: { id: string; name: string; price: number }[];
   classes: { id: string; name: string; courseName: string }[];
+  /** Formas de pagamento ativas (Administração › Formas de pagamento). */
+  formasPagamento: { value: string; label: string }[];
   defaultCourseId: string;
   defaultAmount: number;
   defaultValues: {
@@ -196,8 +191,7 @@ function EnrollmentForm({
           addressZip: (formData.get("addressZip") as string) || "",
           socialNetwork: (formData.get("socialNetwork") as string) || "",
           company: (formData.get("company") as string) || "",
-          paymentMethod: ((formData.get("paymentMethod") as string) ||
-            "") as PaymentMethod | "",
+          paymentMethod: (formData.get("paymentMethod") as string) || "",
           paymentDetails: (formData.get("paymentDetails") as string) || "",
           installments: Number(formData.get("installments") || 1),
           totalAmount: Number(formData.get("totalAmount") || 0),
@@ -426,9 +420,9 @@ function EnrollmentForm({
               className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
             >
               <option value="">Selecione...</option>
-              {Object.entries(PAYMENT_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
+              {formasPagamento.map((f) => (
+                <option key={f.value} value={f.value}>
+                  {f.label}
                 </option>
               ))}
             </select>

@@ -31,6 +31,7 @@ import {
   updateCourseAction,
   type ActionState,
 } from "@/lib/actions/courses";
+import { rotuloPagamento } from "@/lib/registries";
 
 const courseSchema = z.object({
   name: z.string().min(3, "Mínimo 3 caracteres"),
@@ -59,20 +60,11 @@ interface CourseFormDialogProps {
     status: string;
     paymentMethods?: PaymentMethod[];
   };
+  /** Formas de pagamento ativas (Administração › Formas de pagamento). */
+  formasPagamento: { value: string; label: string }[];
 }
 
-const PAYMENT_OPTIONS = [
-  { value: "PIX", label: "PIX" },
-  { value: "BOLETO", label: "Boleto" },
-  { value: "CARTAO_CREDITO", label: "Cartão de Crédito" },
-  { value: "CARTAO_DEBITO", label: "Cartão de Débito" },
-  { value: "DINHEIRO", label: "Dinheiro" },
-  { value: "TRANSFERENCIA", label: "Transferência" },
-  { value: "PARCELADO_PROPRIO", label: "Parcelado Próprio" },
-  { value: "OUTRO", label: "Outro" },
-];
-
-export function CourseFormDialog({ course }: CourseFormDialogProps) {
+export function CourseFormDialog({ course, formasPagamento }: CourseFormDialogProps) {
   const isEdit = !!course;
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -268,14 +260,14 @@ export function CourseFormDialog({ course }: CourseFormDialogProps) {
             {paymentMethods.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {paymentMethods.map((p) => {
-                  const opt = PAYMENT_OPTIONS.find((o) => o.value === p.method);
+                  const opt = formasPagamento.find((o) => o.value === p.method);
                   return (
                     <div
                       key={p.method}
                       className="flex items-center gap-1.5 rounded-full border border-direta-orange/30 bg-direta-orange/10 px-3 py-1 text-xs"
                     >
                       <span className="font-medium text-direta-orange-dark">
-                        {opt?.label ?? p.method}
+                        {opt?.label ?? rotuloPagamento(p.method)}
                       </span>
                       {p.details && (
                         <span className="text-slate-600">· {p.details}</span>
@@ -299,13 +291,13 @@ export function CourseFormDialog({ course }: CourseFormDialogProps) {
                   <SelectValue placeholder="Adicionar forma..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {PAYMENT_OPTIONS.filter(
-                    (o) => !paymentMethods.some((p) => p.method === o.value)
-                  ).map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
+                  {formasPagamento
+                    .filter((o) => !paymentMethods.some((p) => p.method === o.value))
+                    .map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
               <Input
@@ -320,10 +312,22 @@ export function CourseFormDialog({ course }: CourseFormDialogProps) {
                 size="icon"
                 onClick={addPaymentMethod}
                 disabled={!newMethod}
+                title="Adicionar forma de pagamento ao curso"
               >
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
+
+            <p className="text-xs text-slate-500">
+              Para cadastrar uma forma nova, use{" "}
+              <a
+                href="/admin/formas-pagamento"
+                className="font-medium text-direta-orange hover:underline"
+              >
+                Administração › Formas de pagamento
+              </a>
+              .
+            </p>
           </div>
 
           <DialogFooter>

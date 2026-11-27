@@ -5,17 +5,6 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
-const paymentMethodEnum = z.enum([
-  "PIX",
-  "BOLETO",
-  "CARTAO_CREDITO",
-  "CARTAO_DEBITO",
-  "DINHEIRO",
-  "TRANSFERENCIA",
-  "PARCELADO_PROPRIO",
-  "OUTRO",
-]);
-
 const courseSchema = z.object({
   name: z.string().min(3, "Nome obrigatório"),
   description: z.string().max(1000).optional(),
@@ -42,21 +31,33 @@ async function requireAdmin() {
 }
 
 interface PaymentMethodInput {
-  method: z.infer<typeof paymentMethodEnum>;
+  method: string;
   details?: string;
   active?: boolean;
 }
 
-function parsePaymentMethods(formData: FormData): PaymentMethodInput[] {
+/**
+ * Lê as formas de pagamento enviadas pelo formulário e valida contra o
+ * cadastro (Administração › Formas de pagamento) — antes a lista era fixa
+ * no código.
+ */
+async function parsePaymentMethods(formData: FormData): Promise<PaymentMethodInput[]> {
   const methods = formData.getAll("paymentMethod") as string[];
   const details = formData.getAll("paymentDetails") as string[];
+  const unicas = [...new Set(methods.filter(Boolean))];
+  if (unicas.length === 0) return [];
+
+  const cadastradas = await prisma.paymentMethodType.findMany({
+    where: { description: { in: unicas } },
+    select: { description: true },
+  });
+  const permitidas = new Set(cadastradas.map((c) => c.description));
+
   const result: PaymentMethodInput[] = [];
   methods.forEach((m, i) => {
-    if (!m) return;
-    const parsed = paymentMethodEnum.safeParse(m);
-    if (!parsed.success) return;
+    if (!m || !permitidas.has(m)) return;
     result.push({
-      method: parsed.data,
+      method: m,
       details: details[i] || undefined,
       active: true,
     });
@@ -102,7 +103,7 @@ export async function createCourseAction(
       };
     }
 
-    const paymentMethods = parsePaymentMethods(formData);
+    const paymentMethods = await parsePaymentMethods(formData);
 
     const course = await prisma.course.create({
       data: {
@@ -161,7 +162,7 @@ export async function updateCourseAction(
       };
     }
 
-    const paymentMethods = parsePaymentMethods(formData);
+    const paymentMethods = await parsePaymentMethods(formData);
 
     const course = await prisma.course.update({
       where: { id },

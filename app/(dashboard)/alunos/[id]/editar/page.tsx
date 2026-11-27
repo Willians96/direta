@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getFormasPagamentoAtivas } from "@/lib/registries-db";
 import { StudentForm, type AlunoFormValues } from "../../student-form";
 
 export const dynamic = "force-dynamic";
@@ -58,7 +59,7 @@ export default async function EditarAlunoPage({
   });
   if (!enrollment) notFound();
 
-  const [courses, classes] = await Promise.all([
+  const [courses, classes, formasPagamento] = await Promise.all([
     prisma.course.findMany({
       where: { status: "ATIVO" },
       select: { id: true, name: true, price: true },
@@ -68,6 +69,7 @@ export default async function EditarAlunoPage({
       select: { id: true, name: true, course: { select: { name: true } } },
       orderBy: { name: "asc" },
     }),
+    getFormasPagamentoAtivas(),
   ]);
 
   const defaultValues: AlunoFormValues = {
@@ -115,6 +117,7 @@ export default async function EditarAlunoPage({
           enrollmentId={enrollment.id}
           courses={courses.map((c) => ({ ...c, price: Number(c.price) }))}
           classes={classes.map((c) => ({ id: c.id, name: c.name, courseName: c.course.name }))}
+          formasPagamento={formasPagamento}
           defaultValues={defaultValues}
           erro={searchParams.erro ?? null}
         />
