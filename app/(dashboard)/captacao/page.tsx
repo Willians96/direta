@@ -43,6 +43,7 @@ import type { SalesStatus } from "@prisma/client";
  *  3. FONTES PRIO — Indicação / Fachada / Ligação por vendedor (com MATR e % FECHA)
  *  4. FONTE (CONHECIMENTO) — clientes por forma de conhecimento
  *  5. ACIONADOS POR DIA — meta x entregue x falta por vendedor
+ *  5b. CAPTAÇÃO INDICAÇÃO POR DIA — meta x indicado x falta, com a grade diária
  *  6. CLIENTES PARADOS POR DIA — quem está sem contato
  *  7. FICHA DA MATRÍCULA — REDE SOCIAL (seguidores) e EMPRESAS (cadastro)
  *  8. FECHAMENTO POR CURSO e POR VENDEDOR
@@ -207,7 +208,12 @@ export default async function CaptacaoDashboardPage({
     // Metas do mês por vendedor
     prisma.goal.findMany({
       where: { month: mes, year: ano },
-      select: { userId: true, metaMatricula: true, metaFollowup: true },
+      select: {
+        userId: true,
+        metaMatricula: true,
+        metaFollowup: true,
+        metaIndicacao: true,
+      },
     }),
     // Formas de conhecimento (cadastro oficial)
     prisma.leadSource.findMany({
@@ -401,6 +407,26 @@ export default async function CaptacaoDashboardPage({
       rotulo: `${String(diaNum).padStart(2, "0")}/${String(mes).padStart(2, "0")}`,
     });
   }
+
+  // ---------- 5b. CAPTAÇÃO INDICAÇÃO POR DIA ----------
+  // Meta de indicações do mês x indicações captadas (fonte "Indicação"),
+  // com a quebra diária pedida pela cliente.
+  const indicacoesPorVendedor = new Map<string, number>();
+  const indicacoesPorDia = new Map<string, number>(); // chave: userId|data
+  for (const l of leadsMes) {
+    if (fonteDeLead(l) !== "indicação") continue;
+    const v = l.assignedToId ?? "__sem__";
+    indicacoesPorVendedor.set(v, (indicacoesPorVendedor.get(v) ?? 0) + 1);
+    const chave = `${v}|${dataKey(l.createdAt)}`;
+    indicacoesPorDia.set(chave, (indicacoesPorDia.get(chave) ?? 0) + 1);
+  }
+  const metaIndicacao = new Map(
+    metas.map((m) => [m.userId, m.metaIndicacao] as const)
+  );
+  const totalIndicacoesMes = [...indicacoesPorVendedor.values()].reduce(
+    (acc, n) => acc + n,
+    0
+  );
 
   // ---------- 6. CLIENTES PARADOS ----------
   // Lead "parado" = continua em aberto e está sem contato há mais de 2 dias.
@@ -1081,6 +1107,157 @@ export default async function CaptacaoDashboardPage({
                             {vendedores.map((v) => (
                               <td key={v.id} className="px-3 py-1.5 text-center">
                                 {acionadosPorDia.get(`${v.id}|${dia.iso}`) ?? 0}
+                              </td>
+                            ))}
+                            <td className="px-3 py-1.5 text-center font-medium">
+                              {total}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* 5b. CAPTAÇÃO INDICAÇÃO POR DIA */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Share2 className="h-4 w-4 text-direta-orange" />
+              Captação por indicação
+            </CardTitle>
+            <CardDescription>
+              Meta de indicações do mês x o que a equipe captou por indicação
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-sm">
+                <thead>
+                  <tr className="border-b bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+                    <th className="px-3 py-3">Equipe</th>
+                    <th className="px-3 py-3 text-center">Meta</th>
+                    <th className="px-3 py-3 text-center">Entregue</th>
+                    <th className="px-3 py-3 text-center">Falta</th>
+                    <th className="px-3 py-3 text-center">%</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {vendedores.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-3 py-6 text-center text-sm text-slate-500"
+                      >
+                        Nenhum vendedor cadastrado
+                      </td>
+                    </tr>
+                  ) : (
+                    <>
+                      {vendedores.map((v) => {
+                        const meta = metaIndicacao.get(v.id) ?? 0;
+                        const entregue = indicacoesPorVendedor.get(v.id) ?? 0;
+                        const falta = meta - entregue;
+                        return (
+                          <tr key={v.id}>
+                            <td className="px-3 py-2.5 font-medium text-slate-800">
+                              {v.name}
+                            </td>
+                            <td className="px-3 py-2.5 text-center">{meta}</td>
+                            <td className="px-3 py-2.5 text-center font-medium text-emerald-700">
+                              {entregue}
+                            </td>
+                            <td
+                              className={`px-3 py-2.5 text-center font-medium ${
+                                falta > 0 ? "text-red-600" : "text-slate-500"
+                              }`}
+                            >
+                              {falta > 0 ? falta : 0}
+                            </td>
+                            <td className="px-3 py-2.5 text-center text-slate-600">
+                              {pct(entregue, meta)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      <tr className="bg-slate-50 font-semibold">
+                        <td className="px-3 py-2.5">TOTAL</td>
+                        <td className="px-3 py-2.5 text-center">
+                          {vendedores.reduce(
+                            (acc, v) => acc + (metaIndicacao.get(v.id) ?? 0),
+                            0
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          {totalIndicacoesMes}
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          {vendedores.reduce(
+                            (acc, v) =>
+                              acc +
+                              Math.max(
+                                0,
+                                (metaIndicacao.get(v.id) ?? 0) -
+                                  (indicacoesPorVendedor.get(v.id) ?? 0)
+                              ),
+                            0
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          {pct(
+                            totalIndicacoesMes,
+                            vendedores.reduce(
+                              (acc, v) => acc + (metaIndicacao.get(v.id) ?? 0),
+                              0
+                            )
+                          )}
+                        </td>
+                      </tr>
+                    </>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Grade diária de indicações */}
+            {gradeDias.length > 0 && (
+              <div className="border-t">
+                <p className="px-3 pt-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Indicações por dia
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[520px] text-sm">
+                    <thead>
+                      <tr className="border-b bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+                        <th className="px-3 py-2">Dia</th>
+                        {vendedores.map((v) => (
+                          <th key={v.id} className="px-3 py-2 text-center">
+                            {v.name}
+                          </th>
+                        ))}
+                        <th className="px-3 py-2 text-center">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {gradeDias.map((dia) => {
+                        const total = vendedores.reduce(
+                          (acc, v) =>
+                            acc +
+                            (indicacoesPorDia.get(`${v.id}|${dia.iso}`) ?? 0),
+                          0
+                        );
+                        return (
+                          <tr key={dia.iso}>
+                            <td className="px-3 py-1.5 text-slate-600">
+                              {dia.rotulo}
+                            </td>
+                            {vendedores.map((v) => (
+                              <td key={v.id} className="px-3 py-1.5 text-center">
+                                {indicacoesPorDia.get(`${v.id}|${dia.iso}`) ?? 0}
                               </td>
                             ))}
                             <td className="px-3 py-1.5 text-center font-medium">
