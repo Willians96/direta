@@ -19,6 +19,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Search, X } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
@@ -31,16 +34,28 @@ import { LeadSourceRowActions } from "./lead-source-row-actions";
  * Como o cliente conheceu a escola. A lista alimenta o select de Fonte do
  * cadastro de lead e o painel de Captação (bloco FONTE / CONHECIMENTO).
  */
-export default async function FontesPage() {
+export default async function FontesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
   const session = await auth();
   const role = (session?.user as any)?.role as string | undefined;
   if (!session?.user) redirect("/login");
   if (role !== "ADMIN" && role !== "CAPTACAO") redirect("/");
 
+  const params = await searchParams;
+  const q = (params.q ?? "").trim();
+
   const fontes = await prisma.leadSource.findMany({
     include: { _count: { select: { leads: true } } },
     orderBy: [{ active: "desc" }, { description: "asc" }],
   });
+
+  // Aba "Procura" da tela antiga: filtra a lista sem alterar os indicadores.
+  const fontesFiltradas = q
+    ? fontes.filter((f) => f.description.toLowerCase().includes(q.toLowerCase()))
+    : fontes;
 
   const total = fontes.length;
   const ativas = fontes.filter((f) => f.active).length;
@@ -102,6 +117,27 @@ export default async function FontesPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Procura */}
+            <form className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Input
+                name="q"
+                defaultValue={q}
+                placeholder="Buscar forma de conhecimento..."
+                className="w-full sm:max-w-xs"
+              />
+              <Button type="submit" size="sm" variant="outline">
+                <Search className="mr-2 h-4 w-4" />
+                Buscar
+              </Button>
+              {q && (
+                <Button type="button" size="sm" variant="ghost" asChild>
+                  <a href="/captacao/fontes">
+                    <X className="mr-1 h-4 w-4" />
+                    Limpar
+                  </a>
+                </Button>
+              )}
+            </form>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -113,14 +149,16 @@ export default async function FontesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {fontes.length === 0 ? (
+                {fontesFiltradas.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-slate-500">
-                      Nenhuma forma de conhecimento cadastrada.
+                      {q
+                        ? "Nenhuma forma de conhecimento encontrada."
+                        : "Nenhuma forma de conhecimento cadastrada."}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  fontes.map((f) => (
+                  fontesFiltradas.map((f) => (
                     <TableRow key={f.id}>
                       <TableCell className="font-medium">{f.description}</TableCell>
                       <TableCell>
