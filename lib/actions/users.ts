@@ -14,21 +14,28 @@ import { saveStoredFile, deleteStoredFile } from "@/lib/storage";
  * sistema antigo (código, admissão, documentos, endereço, cargo,
  * observações e "aparecer para efetuar matrícula").
  */
+/**
+ * Campos do colaborador vindos do formulário.
+ *
+ * As datas chegam como string (aaaa-mm-dd) e são convertidas para Date em
+ * `dadosColaborador` — por isso o schema aceita string OU Date. Texto vazio
+ * vira `undefined` (e `null` só na hora de gravar no banco).
+ */
 const camposColaborador = {
-  code: z.string().max(30).optional().or(z.literal("")),
-  admissionDate: z.string().optional().or(z.literal("")),
-  birthDate: z.string().optional().or(z.literal("")),
-  cpf: z.string().max(20).optional().or(z.literal("")),
-  rg: z.string().max(20).optional().or(z.literal("")),
-  mobile: z.string().max(20).optional().or(z.literal("")),
-  jobTitle: z.string().max(80).optional().or(z.literal("")),
-  addressStreet: z.string().max(150).optional().or(z.literal("")),
-  addressNumber: z.string().max(20).optional().or(z.literal("")),
-  addressDistrict: z.string().max(80).optional().or(z.literal("")),
-  addressCity: z.string().max(80).optional().or(z.literal("")),
-  addressState: z.string().max(2).optional().or(z.literal("")),
-  addressZip: z.string().max(12).optional().or(z.literal("")),
-  notes: z.string().max(2000).optional().or(z.literal("")),
+  code: z.string().max(30).optional(),
+  admissionDate: z.union([z.string(), z.date()]).optional(),
+  birthDate: z.union([z.string(), z.date()]).optional(),
+  cpf: z.string().max(20).optional(),
+  rg: z.string().max(20).optional(),
+  mobile: z.string().max(20).optional(),
+  jobTitle: z.string().max(80).optional(),
+  addressStreet: z.string().max(150).optional(),
+  addressNumber: z.string().max(20).optional(),
+  addressDistrict: z.string().max(80).optional(),
+  addressCity: z.string().max(80).optional(),
+  addressState: z.string().max(2).optional(),
+  addressZip: z.string().max(12).optional(),
+  notes: z.string().max(2000).optional(),
   showEnrollment: z.boolean(),
 };
 
@@ -41,7 +48,7 @@ const createUserSchema = z.object({
   // Situação já pode ser definida na criação (tela antiga permitia Inativo).
   status: z.enum(["ATIVO", "INATIVO"]).optional(),
   // Referência da foto já enviada para o storage (upload feito antes do envio).
-  avatarRef: z.string().max(300).optional().or(z.literal("")),
+  avatarRef: z.string().max(300).optional(),
   ...camposColaborador,
 });
 
@@ -56,13 +63,16 @@ const updateUserSchema = z.object({
 
 /** Lê os campos do colaborador do FormData e devolve o formato do Prisma. */
 function dadosColaborador(formData: FormData) {
+  // Campo vazio -> undefined (o `|| null` acontece na hora de gravar).
   const data = (campo: string) => {
     const valor = ((formData.get(campo) as string) || "").trim();
-    return valor === "" ? null : valor;
+    return valor === "" ? undefined : valor;
   };
   const dataDate = (campo: string) => {
     const valor = ((formData.get(campo) as string) || "").trim();
-    return valor ? new Date(valor) : null;
+    if (!valor) return undefined;
+    const d = new Date(valor);
+    return Number.isNaN(d.getTime()) ? undefined : d;
   };
 
   return {
