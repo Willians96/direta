@@ -15,11 +15,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/shared/page-header";
 import { SalesStatusBadge } from "@/components/shared/sales-status-badge";
-import { PriorityBadge } from "@/components/shared/status-badge";
+import { PriorityBadge, StatusBadge } from "@/components/shared/status-badge";
 import { formatPhone, formatDate } from "@/lib/utils";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { SalesStatus, LeadPriority } from "@prisma/client";
+import { SalesStatus, LeadStatus, LeadPriority } from "@prisma/client";
 
 const SALES_STATUS_OPTIONS = [
   "NEGOCIANDO",
@@ -36,10 +36,29 @@ const SALES_STATUS_OPTIONS = [
   "VISITA",
 ] as SalesStatus[];
 
+// Status do funil (etapa do processo). Pedido da cliente: o painel do
+// vendedor tem que permitir filtrar por esta dimensão, além do status do
+// cliente (classificação do vendedor).
+const FUNIL_STATUS_OPTIONS: { value: LeadStatus; label: string }[] = [
+  { value: "NOVO", label: "Novo" },
+  { value: "QUALIFICADO", label: "Qualificado" },
+  { value: "PROPOSTA_ENVIADA", label: "Proposta enviada" },
+  { value: "EM_NEGOCIACAO", label: "Em negociação" },
+  { value: "AGUARDANDO_ANALISE", label: "Em análise" },
+  { value: "DEVOLVIDA_AJUSTE", label: "Devolvida para ajuste" },
+  { value: "APROVADA", label: "Aprovada (matrícula)" },
+  { value: "PERDIDA", label: "Perdida" },
+  { value: "QUARTO_CONTATO", label: "4º contato" },
+  { value: "BLOQUEIOU", label: "Bloqueou contato" },
+  { value: "CONCORRENTE", label: "Foi para concorrente" },
+  { value: "FIN_SEM_RENDA", label: "Sem renda" },
+  { value: "INATIVO", label: "Inativo" },
+];
+
 export default async function VendasLeadsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; salesStatus?: string; priority?: string }>;
+  searchParams: Promise<{ q?: string; salesStatus?: string; priority?: string; status?: string }>;
 }) {
   const session = await auth();
   if (!session?.user) redirect("/login");
@@ -50,6 +69,9 @@ export default async function VendasLeadsPage({
   const q = params.q?.trim() ?? "";
   const salesStatusFilter = params.salesStatus as SalesStatus | undefined;
   const priorityFilter = params.priority as LeadPriority | undefined;
+  const statusFilter = FUNIL_STATUS_OPTIONS.some((o) => o.value === params.status)
+    ? (params.status as LeadStatus)
+    : undefined;
 
   const where: any = {
     // Admin vê todos; vendedor vê apenas os seus
@@ -64,8 +86,9 @@ export default async function VendasLeadsPage({
   }
   if (salesStatusFilter) where.salesStatus = salesStatusFilter;
   if (priorityFilter) where.priority = priorityFilter;
+  if (statusFilter) where.status = statusFilter;
 
-  const [leads, totalPorStatus] = await Promise.all([
+  const [leads, totalPorStatus, totalInativos] = await Promise.all([
     prisma.lead.findMany({
       where,
       include: {
@@ -84,12 +107,19 @@ export default async function VendasLeadsPage({
       where: role === "VENDAS" ? { assignedToId: userId } : {},
       _count: { _all: true },
     }),
+    // Contador de leads inativos (etapa do funil), como no painel antigo.
+    prisma.lead.count({
+      where: {
+        ...(role === "VENDAS" ? { assignedToId: userId } : {}),
+        status: "INATIVO",
+      },
+    }),
   ]);
 
   const statusCount = (s: SalesStatus) =>
     totalPorStatus.find((g) => g.salesStatus === s)?._count._all ?? 0;
 
-  const hasFilters = !!(q || salesStatusFilter || priorityFilter);
+  const hasFilters = !!(q || salesStatusFilter || priorityFilter || statusFilter);
 
   return (
     <div>
@@ -109,7 +139,7 @@ export default async function VendasLeadsPage({
 
       <div className="space-y-4 p-4 md:p-6">
         {/* Mini KPIs por Status do cliente */}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7">
           <Link
             href="/vendas/leads"
             className="rounded-md border bg-white p-3 text-center transition-colors hover:border-direta-orange"
@@ -150,6 +180,13 @@ export default async function VendasLeadsPage({
             <div className="text-xl font-bold text-emerald-600">{statusCount("MATRICULADO")}</div>
           </Link>
           <Link
+            href="/vendas/leads?status=INATIVO"
+            className="rounded-md border bg-white p-3 text-center transition-colors hover:border-slate-400"
+          >
+            <div className="text-xs uppercase text-slate-500">Inativos</div>
+            <div className="text-xl font-bold text-slate-500">{totalInativos}</div>
+          </Link>
+          <Link
             href="/vendas/leads?priority=ALTA"
             className="rounded-md border bg-white p-3 text-center transition-colors hover:border-red-400"
           >
@@ -170,6 +207,18 @@ export default async function VendasLeadsPage({
                 placeholder="Buscar por nome, telefone, e-mail..."
                 className="w-full sm:max-w-sm"
               />
+              <select
+                name="status"
+                defaultValue={statusFilter ?? ""}
+                className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm sm:w-auto"
+              >
+                <option value="">Todos os status do funil</option>
+                {FUNIL_STATUS_OPTIONS.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
               <select
                 name="salesStatus"
                 defaultValue={salesStatusFilter ?? ""}
@@ -213,7 +262,8 @@ export default async function VendasLeadsPage({
           <CardHeader>
             <CardTitle className="text-base">{leads.length} leads</CardTitle>
             <CardDescription>
-              Status do cliente é a classificação feita por você
+              Status do cliente é a classificação feita por você; Funil é a etapa do
+              processo em que o lead está
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
@@ -230,6 +280,7 @@ export default async function VendasLeadsPage({
                     <tr className="border-b bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
                       <th className="px-3 py-3 md:px-6">Nome</th>
                       <th className="px-3 py-3 md:px-6">Status do cliente</th>
+                      <th className="px-3 py-3 md:px-6">Funil</th>
                       <th className="px-3 py-3 md:px-6">Prioridade</th>
                       <th className="px-3 py-3 md:px-6">Telefones</th>
                       <th className="px-3 py-3 md:px-6">Curso</th>
@@ -257,6 +308,9 @@ export default async function VendasLeadsPage({
                         </td>
                         <td className="px-3 py-3 md:px-6">
                           <SalesStatusBadge status={lead.salesStatus} />
+                        </td>
+                        <td className="px-3 py-3 md:px-6">
+                          <StatusBadge status={lead.status} />
                         </td>
                         <td className="px-3 py-3 md:px-6">
                           <PriorityBadge priority={lead.priority} />
