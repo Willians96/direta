@@ -88,7 +88,7 @@ export default async function VendasLeadsPage({
   if (priorityFilter) where.priority = priorityFilter;
   if (statusFilter) where.status = statusFilter;
 
-  const [leads, totalPorStatus, totalInativos] = await Promise.all([
+  const [leads, totalPorStatus, totalInativos, totalAlta] = await Promise.all([
     prisma.lead.findMany({
       where,
       include: {
@@ -112,6 +112,14 @@ export default async function VendasLeadsPage({
       where: {
         ...(role === "VENDAS" ? { assignedToId: userId } : {}),
         status: "INATIVO",
+      },
+    }),
+    // Contador de leads de prioridade alta (o card precisa contar os de
+    // prioridade Alta, e não o total de leads).
+    prisma.lead.count({
+      where: {
+        ...(role === "VENDAS" ? { assignedToId: userId } : {}),
+        priority: "ALTA",
       },
     }),
   ]);
@@ -191,9 +199,7 @@ export default async function VendasLeadsPage({
             className="rounded-md border bg-white p-3 text-center transition-colors hover:border-red-400"
           >
             <div className="text-xs uppercase text-slate-500">🔥 Alta</div>
-            <div className="text-xl font-bold text-red-600">
-              {totalPorStatus.reduce((acc, g) => acc + g._count._all, 0)}
-            </div>
+            <div className="text-xl font-bold text-red-600">{totalAlta}</div>
           </Link>
         </div>
 
