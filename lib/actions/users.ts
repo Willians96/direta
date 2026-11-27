@@ -279,6 +279,17 @@ export async function updateUserAction(
       }
     }
 
+    // O e-mail é único: evita o erro cru de constraint vinda do banco.
+    if (parsed.data.email !== before.email) {
+      const outroComMesmoEmail = await prisma.user.findUnique({
+        where: { email: parsed.data.email },
+        select: { id: true },
+      });
+      if (outroComMesmoEmail && outroComMesmoEmail.id !== id) {
+        return { ok: false, error: "E-mail já cadastrado." };
+      }
+    }
+
     const user = await prisma.user.update({
       where: { id },
       data: {
